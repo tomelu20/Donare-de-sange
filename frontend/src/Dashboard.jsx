@@ -21,6 +21,13 @@ function Dashboard({ onLogout }) {
   // State-uri pentru observații per programare
   const [notesState, setNotesState] = useState({});
 
+  // --- STATE-URI NOI PENTRU FILTRARE, CĂUTARE ȘI PAGINARE ADMIN ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCampaignFilter, setSelectedCampaignFilter] = useState('all');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   const [eligibilityQuestions, setEligibilityQuestions] = useState([]);
   const [newQuestionText, setNewQuestionText] = useState('');
   const [newQuestionType, setNewQuestionType] = useState('checkbox');
@@ -62,7 +69,7 @@ function Dashboard({ onLogout }) {
       const questionsRes = await axios.get('http://127.0.0.1:8000/eligibility/questions');
       setEligibilityQuestions(questionsRes.data);
 
-      // 3. Preluăm programările proprii (indiferent dacă e admin sau donator)
+      // 3. Preluăm programările proprii
       const myAppsRes = await axios.get(`http://127.0.0.1:8000/appointments/me?user_id=${currentUser.id}`);
       setMyAppointments(myAppsRes.data);
 
@@ -95,6 +102,33 @@ function Dashboard({ onLogout }) {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // --- LOGICĂ PENTRU FILTRARE ȘI PAGINARE ---
+  const filteredAppointments = adminAppointments.filter(app => {
+    // 1. Filtrare Căutare după Nume, Prenume sau Telefon
+    const fullName = `${app.donor_name || ''} ${app.donor_surname || ''}`.toLowerCase();
+    const phone = `${app.donor_phone || ''}`;
+    const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || phone.includes(searchQuery);
+
+    // 2. Filtrare după Campanie
+    const matchesCampaign = selectedCampaignFilter === 'all' || String(app.campaign_title) === String(selectedCampaignFilter);
+
+    // 3. Filtrare după Status
+    const matchesStatus = selectedStatusFilter === 'all' || app.status === selectedStatusFilter;
+
+    return matchesSearch && matchesCampaign && matchesStatus;
+  });
+
+  // Calculare Pagini
+  const totalPages = Math.ceil(filteredAppointments.length / ITEMS_PER_PAGE) || 1;
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const currentAppointments = filteredAppointments.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Resetare pagină la schimbarea filtrelor
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCampaignFilter, selectedStatusFilter]);
 
   // Salvare Observație Medicală
   const handleSaveNotes = async (appId) => {
@@ -301,7 +335,6 @@ function Dashboard({ onLogout }) {
           <span style={{ fontSize: '24px' }}>🩸</span>
           <h2 style={{ margin: 0, color: '#e63946', fontSize: '22px', fontWeight: 'bold' }}>Platformă Donare Sânge</h2>
           
-          {/* BUTON PROFILUL MEU NOU ÎN STÂNGA SUS */}
           {currentUser && (
             <button 
               onClick={() => setShowProfileModal(true)}
@@ -328,7 +361,7 @@ function Dashboard({ onLogout }) {
 
       <div style={{ maxWidth: '1200px', margin: '30px auto', padding: '0 20px' }}>
         
-        {/* STRUCTURA NOTIFICĂRI */}
+        {/* NOTIFICĂRI */}
         {successNotification && <div style={{ backgroundColor: '#e3ffe3', color: '#198754', padding: '15px', borderRadius: '6px', marginBottom: '20px', borderLeft: '5px solid #198754', fontWeight: 'bold' }}>✔️ {successNotification}</div>}
         {apiError && <div style={{ backgroundColor: '#ffe3e3', color: '#dc3545', padding: '15px', borderRadius: '6px', marginBottom: '20px', borderLeft: '5px solid #dc3545', fontWeight: 'bold' }}>❌ {apiError}</div>}
 
@@ -340,81 +373,157 @@ function Dashboard({ onLogout }) {
             {(currentUser?.role === 'admin' || currentUser?.role === 'ADMIN') && (
               <>
                 <section style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #e1e4e8' }}>
+                  
                   <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px' }}>
                     📋 Centralizator Management Programări (Vizualizare Medicală)
                   </h3>
-                  {adminAppointments.length === 0 ? (
-                    <p style={{ color: '#666', fontStyle: 'italic' }}>Nu există nicio programare înregistrată în acest moment.</p>
-                  ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead>
-                          <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                            <th style={{ padding: '12px' }}>Donator</th>
-                            <th style={{ padding: '12px' }}>Telefon</th>
-                            <th style={{ padding: '12px' }}>Campanie</th>
-                            <th style={{ padding: '12px' }}>Dată & Oră</th>
-                            <th style={{ padding: '12px' }}>Status</th>
-                            <th style={{ padding: '12px' }}>Observații Medicale / Incident</th>
-                            <th style={{ padding: '12px', textAlign: 'center' }}>Acțiuni Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {adminAppointments.map((app) => {
-                            const appId = app.appointment_id || app.id;
-                            return (
-                              <tr key={appId} style={{ borderBottom: '1px solid #eceeef' }}>
-                                <td style={{ padding: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                                  {app.donor_name} {app.donor_surname}
-                                </td>
-                                <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
-                                  {app.donor_phone}
-                                </td>
-                                <td style={{ padding: '12px', fontWeight: '500', whiteSpace: 'nowrap' }}>
-                                  {app.campaign_title}
-                                </td>
-                                <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
-                                  {formatDateRo(app.campaign_date)} | <strong style={{ color: '#e63946' }}>{formatTimeShort(app.slot_time)}</strong>
-                                </td>
-                                <td style={{ padding: '12px' }}>
-                                  <span style={{
-                                    padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold',
-                                    backgroundColor: app.status === 'confirmed' ? '#e3ffe3' : app.status === 'attended' ? '#d1e7dd' : '#fff3cd',
-                                    color: app.status === 'confirmed' ? '#198754' : app.status === 'attended' ? '#0f5132' : '#856404'
-                                  }}>
-                                    {app.status === 'confirmed' ? 'Confirmată' : app.status === 'attended' ? 'Prezent ✓' : 'Absent ✗'}
-                                  </span>
-                                </td>
 
-                                {/* CÂMP DE OBSERVAȚII MEDICALE */}
-                                <td style={{ padding: '12px' }}>
-                                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                    <input 
-                                      type="text" 
-                                      value={notesState[appId] || ''} 
-                                      onChange={(e) => setNotesState({ ...notesState, [appId]: e.target.value })}
-                                      placeholder="Ex: I s-a făcut rău, amețeală..."
-                                      style={{ padding: '5px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '12px', width: '180px' }}
-                                    />
-                                    <button 
-                                      onClick={() => handleSaveNotes(appId)} 
-                                      style={{ padding: '5px 8px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
-                                      💾
-                                    </button>
-                                  </div>
-                                </td>
-
-                                <td style={{ padding: '12px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                                  <button onClick={() => handleMarkAttendance(appId)} disabled={app.status === 'attended'} style={{ padding: '6px 8px', backgroundColor: app.status === 'attended' ? '#ccc' : '#198754', color: 'white', border: 'none', borderRadius: '4px', cursor: app.status === 'attended' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Prezent</button>
-                                  <button onClick={() => handleMarkNoShow(appId)} disabled={app.status === 'no_show'} style={{ padding: '6px 8px', backgroundColor: app.status === 'no_show' ? '#ccc' : '#ffc107', color: '#333', border: 'none', borderRadius: '4px', cursor: app.status === 'no_show' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Absent</button>
-                                  <button onClick={() => handleCancelClick(appId)} style={{ padding: '6px 8px', backgroundColor: '#fff', border: '1px solid #dc3545', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Anulează</button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                  {/* BARĂ NOUĂ DE FILTRARE & CĂUTARE */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', gap: '15px', marginBottom: '20px', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '6px', border: '1px solid #eee' }}>
+                    
+                    {/* Căutare Nume/Telefon */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#555' }}>🔍 Căutare Donator:</label>
+                      <input 
+                        type="text" 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Nume, prenume sau telefon..."
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', boxSizing: 'border-box' }}
+                      />
                     </div>
+
+                    {/* Filtru Campanie */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#555' }}>📍 Filtrează după Campanie:</label>
+                      <select 
+                        value={selectedCampaignFilter}
+                        onChange={(e) => setSelectedCampaignFilter(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', backgroundColor: 'white', boxSizing: 'border-box' }}
+                      >
+                        <option value="all">Toate Campaniile</option>
+                        {campaigns.map(c => (
+                          <option key={c.id} value={c.title}>{c.title}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtru Status */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#555' }}>📌 Filtrează după Status:</label>
+                      <select 
+                        value={selectedStatusFilter}
+                        onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', backgroundColor: 'white', boxSizing: 'border-box' }}
+                      >
+                        <option value="all">Toate Statusurile</option>
+                        <option value="confirmed">Confirmată</option>
+                        <option value="attended">Prezent ✓</option>
+                        <option value="no_show">Absent ✗</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {filteredAppointments.length === 0 ? (
+                    <p style={{ color: '#666', fontStyle: 'italic', padding: '15px 0' }}>Nu s-a găsit nicio programare conform filtrelor selectate.</p>
+                  ) : (
+                    <>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                              <th style={{ padding: '12px' }}>Donator</th>
+                              <th style={{ padding: '12px' }}>Telefon</th>
+                              <th style={{ padding: '12px' }}>Campanie</th>
+                              <th style={{ padding: '12px' }}>Dată & Oră</th>
+                              <th style={{ padding: '12px' }}>Status</th>
+                              <th style={{ padding: '12px' }}>Observații Medicale / Incident</th>
+                              <th style={{ padding: '12px', textAlign: 'center' }}>Acțiuni Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {currentAppointments.map((app) => {
+                              const appId = app.appointment_id || app.id;
+                              return (
+                                <tr key={appId} style={{ borderBottom: '1px solid #eceeef' }}>
+                                  <td style={{ padding: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                    {app.donor_name} {app.donor_surname}
+                                  </td>
+                                  <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
+                                    {app.donor_phone}
+                                  </td>
+                                  <td style={{ padding: '12px', fontWeight: '500', whiteSpace: 'nowrap' }}>
+                                    {app.campaign_title}
+                                  </td>
+                                  <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
+                                    {formatDateRo(app.campaign_date)} | <strong style={{ color: '#e63946' }}>{formatTimeShort(app.slot_time)}</strong>
+                                  </td>
+                                  <td style={{ padding: '12px' }}>
+                                    <span style={{
+                                      padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap',
+                                      backgroundColor: app.status === 'confirmed' ? '#e3ffe3' : app.status === 'attended' ? '#d1e7dd' : '#fff3cd',
+                                      color: app.status === 'confirmed' ? '#198754' : app.status === 'attended' ? '#0f5132' : '#856404'
+                                    }}>
+                                      {app.status === 'confirmed' ? 'Confirmată' : app.status === 'attended' ? 'Prezent ✓' : 'Absent ✗'}
+                                    </span>
+                                  </td>
+
+                                  <td style={{ padding: '12px' }}>
+                                    <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                                      <input 
+                                        type="text" 
+                                        value={notesState[appId] || ''} 
+                                        onChange={(e) => setNotesState({ ...notesState, [appId]: e.target.value })}
+                                        placeholder="Ex: I s-a făcut rău, amețeală..."
+                                        style={{ padding: '5px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '12px', width: '180px' }}
+                                      />
+                                      <button 
+                                        onClick={() => handleSaveNotes(appId)} 
+                                        style={{ padding: '5px 8px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
+                                        💾
+                                      </button>
+                                    </div>
+                                  </td>
+
+                                  <td style={{ padding: '12px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                    <button onClick={() => handleMarkAttendance(appId)} disabled={app.status === 'attended'} style={{ padding: '6px 8px', backgroundColor: app.status === 'attended' ? '#ccc' : '#198754', color: 'white', border: 'none', borderRadius: '4px', cursor: app.status === 'attended' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Prezent</button>
+                                    <button onClick={() => handleMarkNoShow(appId)} disabled={app.status === 'no_show'} style={{ padding: '6px 8px', backgroundColor: app.status === 'no_show' ? '#ccc' : '#ffc107', color: '#333', border: 'none', borderRadius: '4px', cursor: app.status === 'no_show' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Absent</button>
+                                    <button onClick={() => handleCancelClick(appId)} style={{ padding: '6px 8px', backgroundColor: '#fff', border: '1px solid #dc3545', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Anulează</button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* CONTROALE PAGINARE (CÂTE 10 PE PAGINĂ) */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #eee' }}>
+                        <span style={{ fontSize: '13px', color: '#666' }}>
+                          Afișare <strong>{indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredAppointments.length)}</strong> din <strong>{filteredAppointments.length}</strong> programări
+                        </span>
+                        
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button 
+                            disabled={currentPage === 1} 
+                            onClick={() => setCurrentPage(prev => prev - 1)}
+                            style={{ padding: '6px 12px', backgroundColor: currentPage === 1 ? '#e9ecef' : '#2b2d42', color: currentPage === 1 ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                            ◄ Anterior
+                          </button>
+                          
+                          <span style={{ fontSize: '13px', padding: '0 8px', fontWeight: 'bold', color: '#333' }}>
+                            Pagina {currentPage} din {totalPages}
+                          </span>
+
+                          <button 
+                            disabled={currentPage === totalPages} 
+                            onClick={() => setCurrentPage(prev => prev + 1)}
+                            style={{ padding: '6px 12px', backgroundColor: currentPage === totalPages ? '#e9ecef' : '#2b2d42', color: currentPage === totalPages ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                            Următor ►
+                          </button>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </section>
 
@@ -438,7 +547,7 @@ function Dashboard({ onLogout }) {
                         </thead>
                         <tbody>
                           {topDonors.map((donor, idx) => (
-                            <tr key={donor.id} style={{ borderBottom: '1px solid #eceeef' }}>
+                            <tr key={idx} style={{ borderBottom: '1px solid #eceeef' }}>
                               <td style={{ padding: '10px 12px', fontWeight: 'bold' }}>
                                 {idx === 0 ? '🥇 1' : idx === 1 ? '🥈 2' : idx === 2 ? '🥉 3' : `${idx + 1}`}
                               </td>
@@ -725,7 +834,7 @@ function Dashboard({ onLogout }) {
                             </>
                           )}
 
-                          {/* USER: Buton Programează-te (dezactivat dacă campania este finalizată) */}
+                          {/* USER: Buton Programează-te */}
                           <button 
                             disabled={!camp.is_active}
                             onClick={(e) => {
