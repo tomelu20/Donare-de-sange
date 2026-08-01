@@ -48,14 +48,21 @@ function AIChatbox() {
     if (!inputValue.trim() || isCooldownActive) return;
 
     const userMessage = inputValue;
+    
+    // Extragerea istoricului de mesaje existent înainte de adăugarea celui nou
+    const historyToSend = messages.filter(m => m.sender === 'user' || m.sender === 'ai');
+
     // Adăugăm instant mesajul utilizatorului în listă
     setMessages((prev) => [...prev, { sender: 'user', text: userMessage }]);
     setInputValue('');
     setLoading(true);
 
     try {
-      // Apel către ruta LLM din FastAPI
-      const response = await axios.post('http://127.0.0.1:8000/ai/chat', { message: userMessage });
+      // Apel către ruta LLM din FastAPI trimitând mesajul curent ȘI istoricul
+      const response = await axios.post('http://127.0.0.1:8000/ai/chat', { 
+        message: userMessage,
+        history: historyToSend
+      });
       setMessages((prev) => [...prev, { sender: 'ai', text: response.data.reply }]);
     } catch (error) {
       const secondsToWait = error.response?.data?.retry_after || 60;
@@ -71,8 +78,8 @@ function AIChatbox() {
     }
   };
 
-  // Culori Tematice - Aliniate cu logo-ul din imaginea ta
-  const PRIMARY_RED = '#9b2226'; // Roșu închis pentru Header și Pastilă (Asortat cu logo-ul tău)
+  // Culori Tematice - Aliniate cu logo-ul aplicației
+  const PRIMARY_RED = '#9b2226'; // Roșu închis pentru Header și Pastilă
   const USER_MSG_RED = '#d90429'; // Roșu aprins pentru bulele utilizatorului
   const BG_LIGHT_CREAM = '#fdfaf9'; // Fundal chat extrem de fin, cu o tentă caldă
 
@@ -107,7 +114,6 @@ function AIChatbox() {
                 border: msg.sender === 'ai' ? '1px solid #f0e2e2' : 'none',
                 lineHeight: '1.45'
               }}>
-                {/* Soluție stabilă: Am eliminat props-ul de stil direct de pe ReactMarkdown */}
                 {msg.sender === 'ai' ? (
                   <div className="markdown-chat-reply">
                     <ReactMarkdown>{msg.text}</ReactMarkdown>

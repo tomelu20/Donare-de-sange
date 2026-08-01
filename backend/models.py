@@ -12,6 +12,7 @@ class AppointmentStatus(str, enum.Enum):
     CONFIRMED = 'confirmed'
     CANCELLED = 'cancelled'
     ATTENDED = 'attended'
+    NO_SHOW = 'no_show'
 
 class WaitlistStatus(str, enum.Enum):
     WAITING = 'waiting'
