@@ -1017,7 +1017,13 @@ function Dashboard({ onLogout }) {
           </div>
         </div>
       )}
-      <AIChatbox />
+      <AIChatbox onSelectCampaign={(campaignId) => {
+          const selected = campaigns.find(c => c.id === parseInt(campaignId, 10));
+          if (selected && selected.is_active) {
+            setSelectedCampaign(selected);
+          }
+        }} 
+      />
     </div>
   );
 }

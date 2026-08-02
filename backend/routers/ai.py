@@ -51,7 +51,6 @@ def chat_with_assistant(payload: ChatRequest, db: Session = Depends(get_db)):
         result = "Campanii active disponibile și disponibilitate orară:\n"
         
         for c in campaigns:
-            # 1. Preluăm toate programările active pentru această campanie grupate după dată și slot_time
             query_sql = text("""
                 SELECT appointment_date, slot_time, COUNT(id) AS booked_count
                 FROM appointments 
@@ -69,7 +68,6 @@ def chat_with_assistant(payload: ChatRequest, db: Session = Depends(get_db)):
                 """), {"camp_id": c.id}).fetchall()
                 taken_slots = {(c.date, row.slot_time): row.booked_count for row in rezultat}
 
-            # 2. Generăm sloturile pe zile și pe ore
             start_date = c.date
             end_date = c.end_date if c.end_date else c.date
 
@@ -104,10 +102,12 @@ def chat_with_assistant(payload: ChatRequest, db: Session = Depends(get_db)):
 
                 current_date += timedelta(days=1)
 
+            # ADĂUGAT: Oferim ID-ul campaniei sub formă de acțiune/link
             result += (
                 f"- **{c.title}** (ID: {c.id})\n"
                 f"  Locație: {c.location_name} ({c.address})\n"
                 f"  📊 **Total locuri libere rămase:** {total_available_overall}\n"
+                f"  🔗 **Link rapid programare:** [Apasă aici pentru a te programa la {c.title}](#book-campaign-{c.id})\n"
                 f"  🕒 **Defalcare locuri libere per interval orar:**\n"
                 f"{slots_detail_text}\n"
             )
@@ -141,10 +141,10 @@ def chat_with_assistant(payload: ChatRequest, db: Session = Depends(get_db)):
         system_instruction = (
             "Ești asistentul virtual inteligent numit 'Don AI' integrat în Platforma Digitală de Donare Sânge.\n"
             "Misiunea ta este să ajuți donatorii cu informații calde, sigure, precise și optimiste despre proces.\n"
-            "Ai acces la unealta `get_active_campaigns`. Folosește-o OBLIGATORIU de fiecare dată când utilizatorul "
-            "întreabă despre campanii active, locații unde poate dona, dar ȘI atunci când întreabă CÂTE LOCURI LIBERE SAU PE CE ORE MAI SUNT DISPONIBILE.\n"
+            "Ai acces la unealta `get_active_campaigns`. Folosește-o OBLIGATORIU de fiecare dată când utilizatorul întreabă despre campanii active, locații unde poate dona, dar ȘI atunci când întreabă CÂTE LOCURI LIBERE SAU PE CE ORE MAI SUNT DISPONIBILE.\n"
             "CÂND EȘTI ÎNTREBAT DESPRE LOCURI LIBERE: Răspunde clar afișând numărul total de locuri libere, URMAT DE LISTA DEFALCATĂ PE ORE (ex: '- 2 locuri la ora 09:00', '- 1 loc la ora 09:15').\n"
             "IMPORTANT: NU ai acces la datele personale ale persoanelor care au rezervat (nume, telefon etc.) din motive de confidențialitate GDPR.\n"
+            "CÂND PREZINȚI O CAMPANIE: Include OBLIGATORIU link-ul de programare primit din unealtă sub forma exactă: [Apasă aici pentru a te programa](#book-campaign-ID_CAMPANIE).\n"
             "Reguli de bază privind donarea pe care trebuie să le cunoști și să le reamintești când ești întrebat:\n"
             "- Vârsta acceptată: între 18 și 60 de ani.\n"
             "- Greutate minimă: 50 kg atât pentru femei, cât și pentru bărbați.\n"

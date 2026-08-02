@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 
-function AIChatbox() {
+function AIChatbox({ onSelectCampaign }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     { sender: 'ai', text: 'Salut! Sunt asistentul tău inteligent Don AI. Cu ce te pot ajuta astăzi în legătură cu donarea de sânge?' }
@@ -78,10 +78,10 @@ function AIChatbox() {
     }
   };
 
-  // Culori Tematice - Aliniate cu logo-ul aplicației
-  const PRIMARY_RED = '#9b2226'; // Roșu închis pentru Header și Pastilă
-  const USER_MSG_RED = '#d90429'; // Roșu aprins pentru bulele utilizatorului
-  const BG_LIGHT_CREAM = '#fdfaf9'; // Fundal chat extrem de fin, cu o tentă caldă
+  // Culori Tematice
+  const PRIMARY_RED = '#9b2226'; 
+  const USER_MSG_RED = '#d90429'; 
+  const BG_LIGHT_CREAM = '#fdfaf9'; 
 
   return (
     <div style={{ position: 'fixed', bottom: '20px', right: '30px', zIndex: 3000, fontFamily: 'sans-serif' }}>
@@ -109,14 +109,53 @@ function AIChatbox() {
                 alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
                 backgroundColor: msg.sender === 'user' ? USER_MSG_RED : '#ffffff',
                 color: msg.sender === 'user' ? 'white' : '#333333',
-                padding: '10px 14px', borderRadius: '12px', maxWidth: '80%',
+                padding: '10px 14px', borderRadius: '12px', maxWidth: '85%',
                 fontSize: '14px', boxShadow: msg.sender === 'ai' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
                 border: msg.sender === 'ai' ? '1px solid #f0e2e2' : 'none',
                 lineHeight: '1.45'
               }}>
                 {msg.sender === 'ai' ? (
                   <div className="markdown-chat-reply">
-                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    <ReactMarkdown
+                      components={{
+                        a: ({ node, href, children, ...props }) => {
+                          if (href && href.startsWith('#book-campaign-')) {
+                            const campaignId = href.replace('#book-campaign-', '');
+                            return (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  if (onSelectCampaign) {
+                                    onSelectCampaign(campaignId);
+                                  }
+                                }}
+                                style={{
+                                  backgroundColor: '#e63946',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '6px 12px',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                  marginTop: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  boxShadow: '0 2px 4px rgba(230,57,70,0.3)'
+                                }}
+                              >
+                                📅 {children}
+                              </button>
+                            );
+                          }
+                          return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>;
+                        }
+                      }}
+                    >
+                      {msg.text}
+                    </ReactMarkdown>
                   </div>
                 ) : (
                   msg.text
