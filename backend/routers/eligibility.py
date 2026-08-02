@@ -25,7 +25,7 @@ def get_questions(db: Session = Depends(get_db)):
     return result
 
 
-# 2. POST: Salvează programarea ȘI răspunsurile utilizatorului dinamic
+# 2. POST: Salvează programarea ȘI răspunsurile utilizatorului dinamic cu protecție Tranzacțională (Rollback)
 @router.post("/submit", response_model=AppointmentOut, status_code=status.HTTP_201_CREATED)
 def submit_appointment_with_answers(
     payload: AppointmentWithAnswersCreate, 
@@ -56,57 +56,68 @@ def submit_appointment_with_answers(
     if booked_result.booked >= campaign.capacity_per_slot:
         raise HTTPException(status_code=400, detail="Ne pare rău, acest interval orar s-a ocupat între timp!")
 
-    # --- ETAPA B: Inserăm programarea cu detaliile extinse ---
-    insert_app_query = text("""
-        INSERT INTO appointments (
-            campaign_id, user_id, slot_time, appointment_date, status, created_at,
-            is_for_someone_else, guest_name, guest_surname, guest_phone, guest_blood_group
-        )
-        OUTPUT INSERTED.id, INSERTED.campaign_id, INSERTED.user_id, INSERTED.slot_time, INSERTED.status, INSERTED.created_at
-        VALUES (
-            :camp_id, :user_id, :slot_time, :app_date, 'confirmed', GETDATE(),
-            :is_someone_else, :g_name, :g_surname, :g_phone, :g_blood
-        )
-    """)
-    
-    app_result = db.execute(insert_app_query, {
-        "camp_id": payload.appointment.campaign_id,
-        "user_id": current_user_id,
-        "slot_time": payload.appointment.slot_time,
-        "app_date": payload.appointment.appointment_date,
-        "is_someone_else": 1 if payload.appointment.is_for_someone_else else 0,
-        "g_name": payload.appointment.guest_name,
-        "g_surname": payload.appointment.guest_surname,
-        "g_phone": payload.appointment.guest_phone,
-        "g_blood": payload.appointment.guest_blood_group
-    })
-    
-    row = app_result.mappings().first()
-    appointment_id = row["id"]
-
-    # --- ETAPA C: Inserăm răspunsurile dinamice în eligibility_answers ---
-    insert_answer_query = text("""
-        INSERT INTO eligibility_answers (appointment_id, question_id, answer_text)
-        VALUES (:app_id, :quest_id, :ans_text)
-    """)
-    
-    for answer in payload.answers:
-        db.execute(insert_answer_query, {
-            "app_id": appointment_id,
-            "quest_id": answer.question_id,
-            "ans_text": answer.answer_text
+    # --- ETAPA B & C: Inserare tranzacțională (cu Rollback) ---
+    try:
+        # Inserăm programarea cu detaliile extinse
+        insert_app_query = text("""
+            INSERT INTO appointments (
+                campaign_id, user_id, slot_time, appointment_date, status, created_at,
+                is_for_someone_else, guest_name, guest_surname, guest_phone, guest_blood_group
+            )
+            OUTPUT INSERTED.id, INSERTED.campaign_id, INSERTED.user_id, INSERTED.slot_time, INSERTED.status, INSERTED.created_at
+            VALUES (
+                :camp_id, :user_id, :slot_time, :app_date, 'confirmed', GETDATE(),
+                :is_someone_else, :g_name, :g_surname, :g_phone, :g_blood
+            )
+        """)
+        
+        app_result = db.execute(insert_app_query, {
+            "camp_id": payload.appointment.campaign_id,
+            "user_id": current_user_id,
+            "slot_time": payload.appointment.slot_time,
+            "app_date": payload.appointment.appointment_date,
+            "is_someone_else": 1 if payload.appointment.is_for_someone_else else 0,
+            "g_name": payload.appointment.guest_name,
+            "g_surname": payload.appointment.guest_surname,
+            "g_phone": payload.appointment.guest_phone,
+            "g_blood": payload.appointment.guest_blood_group
         })
-    
-    db.commit()
-    
-    return {
-        "id": row["id"],
-        "campaign_id": row["campaign_id"],
-        "user_id": row["user_id"],
-        "slot_time": row["slot_time"].strftime("%H:%M:%S") if hasattr(row["slot_time"], "strftime") else row["slot_time"],
-        "status": row["status"],
-        "created_at": row["created_at"]
-    }
+        
+        row = app_result.mappings().first()
+        appointment_id = row["id"]
+
+        # Inserăm răspunsurile dinamice în eligibility_answers
+        insert_answer_query = text("""
+            INSERT INTO eligibility_answers (appointment_id, question_id, answer_text)
+            VALUES (:app_id, :quest_id, :ans_text)
+        """)
+        
+        for answer in payload.answers:
+            db.execute(insert_answer_query, {
+                "app_id": appointment_id,
+                "quest_id": answer.question_id,
+                "ans_text": answer.answer_text
+            })
+        
+        # Confirmăm tranzacția doar dacă ambele operațiuni au reușit
+        db.commit()
+        
+        return {
+            "id": row["id"],
+            "campaign_id": row["campaign_id"],
+            "user_id": row["user_id"],
+            "slot_time": row["slot_time"].strftime("%H:%M:%S") if hasattr(row["slot_time"], "strftime") else row["slot_time"],
+            "status": row["status"],
+            "created_at": row["created_at"]
+        }
+
+    except Exception as e:
+        # În caz de eroare la inserarea răspunsurilor sau a programării, anulăm totul!
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Eroare la salvarea programării și a chestionarului: {str(e)}"
+        )
 
 
 # Schema Pydantic locală pentru crearea unei întrebări noi
