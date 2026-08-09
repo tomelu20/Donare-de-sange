@@ -109,36 +109,49 @@ def get_all_waitlist_for_admin(db: Session = Depends(get_db)):
 # RUTA NOUĂ: Procesează asignarea din modalul grafic
 @router.post("/{id}/assign", status_code=status.HTTP_200_OK)
 def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depends(get_db)):
-    # 1. Preluăm înregistrarea din waitlist ca să știm user_id și campaign_id
-    wait_query = text("SELECT campaign_id, user_id FROM waitlist WHERE id = :wait_id")
+    # 1. Preluăm înregistrarea din waitlist și data campaniei
+    wait_query = text("""
+        SELECT w.campaign_id, w.user_id, w.status, c.date AS campaign_date 
+        FROM waitlist w
+        JOIN campaigns c ON w.campaign_id = c.id
+        WHERE w.id = :wait_id
+    """)
     wait_entry = db.execute(wait_query, {"wait_id": id}).fetchone()
     
     if not wait_entry:
         raise HTTPException(status_code=404, detail="Înregistrarea din lista de așteptare nu există.")
 
+    if wait_entry.status == 'accepted':
+        raise HTTPException(status_code=400, detail="Ai confirmat deja această ofertă din lista de așteptare!")
+
+    app_check = db.execute(text("""
+        SELECT COUNT(id) AS cnt 
+        FROM appointments 
+        WHERE user_id = :u_id AND campaign_id = :c_id AND status = 'confirmed'
+    """), {"u_id": wait_entry.user_id, "c_id": wait_entry.campaign_id}).fetchone()
+
+    if app_check.cnt > 0:
+        raise HTTPException(status_code=400, detail="Ai deja o programare confirmată activă la această campanie!")
+
     try:
-        # 2. Inserăm direct în tabela appointments ca programare confirmată
+        # 2. Inserăm programarea cu appointment_date setat pe data campaniei!
         insert_app_query = text("""
-            INSERT INTO appointments (campaign_id, user_id, slot_time, status, created_at)
-            VALUES (:camp_id, :user_id, :slot_time, 'confirmed', GETDATE())
+            INSERT INTO appointments (campaign_id, user_id, slot_time, appointment_date, status, created_at)
+            VALUES (:camp_id, :user_id, :slot_time, :app_date, 'confirmed', GETDATE())
         """)
         db.execute(insert_app_query, {
             "camp_id": wait_entry.campaign_id,
             "user_id": wait_entry.user_id,
-            "slot_time": slot_time
+            "slot_time": slot_time,
+            "app_date": wait_entry.campaign_date
         })
 
-        # 3. Modificăm statusul persoanei în tabela 'waitlist' din 'waiting' în 'accepted'
-        update_wait_query = text("""
-            UPDATE waitlist 
-            SET status = 'accepted' 
-            WHERE id = :wait_id
-        """)
-        db.execute(update_wait_query, {"wait_id": id})
+        # Marcăm statusul în waitlist ca fiind 'accepted'
+        db.execute(text("UPDATE waitlist SET status = 'accepted' WHERE id = :wait_id"), {"wait_id": id})
         
         db.commit()
         return {"message": "Donatorul a fost asignat cu succes pe slotul ales!"}
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Eroare la procesarea asignării în baza de date: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Eroare la procesarea asignării: {str(e)}")

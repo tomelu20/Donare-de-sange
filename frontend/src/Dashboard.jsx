@@ -4,6 +4,7 @@ import AppointmentModal from './AppointmentModal';
 import WaitlistModal from './WaitlistModal'; 
 import AIChatbox from './AIChatbox';
 import ProfileModal from './ProfileModal';
+import DonorNotesModal from './DonorNotesModal';
 
 function Dashboard({ onLogout }) {
   const savedUser = sessionStorage.getItem('user_session'); 
@@ -18,10 +19,10 @@ function Dashboard({ onLogout }) {
   const [adminWaitlist, setAdminWaitlist] = useState([]); 
   const [topDonors, setTopDonors] = useState([]); 
   
-  // State-uri pentru observații per programare
-  const [notesState, setNotesState] = useState({});
+  // State pentru modalul de observații medicale per donator
+  const [selectedDonorForNotes, setSelectedDonorForNotes] = useState(null);
 
-  // --- STATE-URI NOI PENTRU FILTRARE, CĂUTARE ȘI PAGINARE ADMIN ---
+  // --- STATE-URI PENTRU FILTRARE, CĂUTARE ȘI PAGINARE ADMIN ---
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCampaignFilter, setSelectedCampaignFilter] = useState('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
@@ -43,6 +44,13 @@ function Dashboard({ onLogout }) {
 
   const [reminderConfirmModal, setReminderConfirmModal] = useState({ isOpen: false, campaign: null });
   const [reminderResultModal, setReminderResultModal] = useState({ isOpen: false, isSuccess: true, message: '' });
+
+  // --- STATE PENTRU POP-UP AUTOMAT WAITLIST (CONFIRMARE DIRECTĂ DIN EMAIL) ---
+  const [waitlistPopup, setWaitlistPopup] = useState({
+    isOpen: false,
+    waitId: null,
+    slot: ''
+  });
 
   // Formular Campanie
   const [newCampTitle, setNewCampTitle] = useState('');
@@ -78,13 +86,6 @@ function Dashboard({ onLogout }) {
         const adminAppsRes = await axios.get('http://127.0.0.1:8000/appointments/all');
         setAdminAppointments(adminAppsRes.data);
 
-        // Populează starea inițială pentru observații
-        const initialNotes = {};
-        adminAppsRes.data.forEach(app => {
-          initialNotes[app.appointment_id || app.id] = app.notes || '';
-        });
-        setNotesState(initialNotes);
-
         const adminWaitlistRes = await axios.get('http://127.0.0.1:8000/waitlist/all');
         setAdminWaitlist(adminWaitlistRes.data);
 
@@ -101,49 +102,73 @@ function Dashboard({ onLogout }) {
 
   useEffect(() => {
     fetchData();
+
+    // INTERCEPTARE REDIRECȚIONARE DIN EMAIL
+    const params = new URLSearchParams(window.location.search);
+    const isWaitlistOffer = params.get('waitlist_offer');
+    const waitId = params.get('wait_id');
+    const slot = params.get('slot');
+
+    if (isWaitlistOffer === 'true' && waitId && slot) {
+      setWaitlistPopup({
+        isOpen: true,
+        waitId: waitId,
+        slot: slot
+      });
+      // Curățăm parametrii din URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
+
+  // Confirmare directă din Pop-up (Adaugă instant în centralizator)
+  const handleAcceptWaitlistOffer = async () => {
+    try {
+      const res = await axios.post(`http://127.0.0.1:8000/waitlist/${waitlistPopup.waitId}/assign?slot_time=${waitlistPopup.slot}:00`);
+      setSuccessNotification(res.data.message || 'Programarea ta a fost confirmată cu succes!');
+      setWaitlistPopup({ isOpen: false, waitId: null, slot: '' });
+      fetchData();
+      setTimeout(() => setSuccessNotification(''), 4000);
+    } catch (err) {
+      setApiError(err.response?.data?.detail || 'Eroare la confirmarea programării.');
+      setWaitlistPopup({ isOpen: false, waitId: null, slot: '' });
+    }
+  };
+
+  // Refuz direct din Pop-up (Pasează locul următoarei persoane)
+  const handleDeclineWaitlistOffer = async (waitId) => {
+    try {
+      const res = await axios.post(`http://127.0.0.1:8000/appointments/waitlist/decline?wait_id=${waitId}`);
+      setSuccessNotification(res.data.message || 'Ai refuzat locul. A fost notificată următoarea persoană.');
+      setWaitlistPopup({ isOpen: false, waitId: null, slot: '' });
+      fetchData();
+      setTimeout(() => setSuccessNotification(''), 4000);
+    } catch (err) {
+      setApiError('Nu s-a putut procesa refuzul orarului.');
+      setWaitlistPopup({ isOpen: false, waitId: null, slot: '' });
+    }
+  };
 
   // --- LOGICĂ PENTRU FILTRARE ȘI PAGINARE ---
   const filteredAppointments = adminAppointments.filter(app => {
-    // 1. Filtrare Căutare după Nume, Prenume sau Telefon
     const fullName = `${app.donor_name || ''} ${app.donor_surname || ''}`.toLowerCase();
     const phone = `${app.donor_phone || ''}`;
     const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || phone.includes(searchQuery);
 
-    // 2. Filtrare după Campanie
     const matchesCampaign = selectedCampaignFilter === 'all' || String(app.campaign_title) === String(selectedCampaignFilter);
-
-    // 3. Filtrare după Status
     const matchesStatus = selectedStatusFilter === 'all' || app.status === selectedStatusFilter;
 
     return matchesSearch && matchesCampaign && matchesStatus;
   });
 
-  // Calculare Pagini
   const totalPages = Math.ceil(filteredAppointments.length / ITEMS_PER_PAGE) || 1;
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentAppointments = filteredAppointments.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Resetare pagină la schimbarea filtrelor
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCampaignFilter, selectedStatusFilter]);
 
-  // Salvare Observație Medicală
-  const handleSaveNotes = async (appId) => {
-    try {
-      await axios.put(`http://127.0.0.1:8000/appointments/${appId}/notes`, {
-        notes: notesState[appId] || ''
-      });
-      setSuccessNotification('Observația a fost salvată cu succes!');
-      setTimeout(() => setSuccessNotification(''), 3000);
-    } catch (err) {
-      setApiError('Nu s-a putut salva observația.');
-    }
-  };
-
-  // Trecere campanie în stare Finalizată / Activă
   const handleToggleCampaignStatus = async (campId) => {
     try {
       const res = await axios.put(`http://127.0.0.1:8000/campaigns/${campId}/toggle-status`);
@@ -378,10 +403,9 @@ function Dashboard({ onLogout }) {
                     📋 Centralizator Management Programări (Vizualizare Medicală)
                   </h3>
 
-                  {/* BARĂ NOUĂ DE FILTRARE & CĂUTARE */}
+                  {/* BARĂ DE FILTRARE & CĂUTARE */}
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', gap: '15px', marginBottom: '20px', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '6px', border: '1px solid #eee' }}>
                     
-                    {/* Căutare Nume/Telefon */}
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#555' }}>🔍 Căutare Donator:</label>
                       <input 
@@ -393,7 +417,6 @@ function Dashboard({ onLogout }) {
                       />
                     </div>
 
-                    {/* Filtru Campanie */}
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#555' }}>📍 Filtrează după Campanie:</label>
                       <select 
@@ -408,7 +431,6 @@ function Dashboard({ onLogout }) {
                       </select>
                     </div>
 
-                    {/* Filtru Status */}
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#555' }}>📌 Filtrează după Status:</label>
                       <select 
@@ -432,12 +454,11 @@ function Dashboard({ onLogout }) {
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                           <thead>
                             <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                              <th style={{ padding: '12px' }}>Donator</th>
+                              <th style={{ padding: '12px' }}>Donator (Click pt. Observații)</th>
                               <th style={{ padding: '12px' }}>Telefon</th>
                               <th style={{ padding: '12px' }}>Campanie</th>
                               <th style={{ padding: '12px' }}>Dată & Oră</th>
                               <th style={{ padding: '12px' }}>Status</th>
-                              <th style={{ padding: '12px' }}>Observații Medicale / Incident</th>
                               <th style={{ padding: '12px', textAlign: 'center' }}>Acțiuni Status</th>
                             </tr>
                           </thead>
@@ -446,9 +467,14 @@ function Dashboard({ onLogout }) {
                               const appId = app.appointment_id || app.id;
                               return (
                                 <tr key={appId} style={{ borderBottom: '1px solid #eceeef' }}>
-                                  <td style={{ padding: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                                    {app.donor_name} {app.donor_surname}
+                                  <td 
+                                    style={{ padding: '12px', fontWeight: 'bold', whiteSpace: 'nowrap', color: '#e63946', cursor: 'pointer', textDecoration: 'underline' }}
+                                    onClick={() => setSelectedDonorForNotes(app)}
+                                    title="Click pentru a vedea sau adăuga observații medicale"
+                                  >
+                                    {app.donor_name} {app.donor_surname} 🩺
                                   </td>
+
                                   <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
                                     {app.donor_phone}
                                   </td>
@@ -468,23 +494,6 @@ function Dashboard({ onLogout }) {
                                     </span>
                                   </td>
 
-                                  <td style={{ padding: '12px' }}>
-                                    <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                      <input 
-                                        type="text" 
-                                        value={notesState[appId] || ''} 
-                                        onChange={(e) => setNotesState({ ...notesState, [appId]: e.target.value })}
-                                        placeholder="Ex: I s-a făcut rău, amețeală..."
-                                        style={{ padding: '5px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '12px', width: '180px' }}
-                                      />
-                                      <button 
-                                        onClick={() => handleSaveNotes(appId)} 
-                                        style={{ padding: '5px 8px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
-                                        💾
-                                      </button>
-                                    </div>
-                                  </td>
-
                                   <td style={{ padding: '12px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
                                     <button onClick={() => handleMarkAttendance(appId)} disabled={app.status === 'attended'} style={{ padding: '6px 8px', backgroundColor: app.status === 'attended' ? '#ccc' : '#198754', color: 'white', border: 'none', borderRadius: '4px', cursor: app.status === 'attended' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Prezent</button>
                                     <button onClick={() => handleMarkNoShow(appId)} disabled={app.status === 'no_show'} style={{ padding: '6px 8px', backgroundColor: app.status === 'no_show' ? '#ccc' : '#ffc107', color: '#333', border: 'none', borderRadius: '4px', cursor: app.status === 'no_show' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Absent</button>
@@ -497,7 +506,7 @@ function Dashboard({ onLogout }) {
                         </table>
                       </div>
 
-                      {/* CONTROALE PAGINARE (CÂTE 10 PE PAGINĂ) */}
+                      {/* CONTROALE PAGINARE */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #eee' }}>
                         <span style={{ fontSize: '13px', color: '#666' }}>
                           Afișare <strong>{indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredAppointments.length)}</strong> din <strong>{filteredAppointments.length}</strong> programări
@@ -613,11 +622,18 @@ function Dashboard({ onLogout }) {
                               </td>
                               <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
                                 <span style={{
-                                  padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold',
-                                  backgroundColor: wait.status === 'accepted' ? '#d1e7dd' : '#fff3cd', 
-                                  color: wait.status === 'accepted' ? '#0f5132' : '#856404'
+                                  padding: '4px 10px', 
+                                  borderRadius: '12px', 
+                                  fontSize: '12px', 
+                                  fontWeight: 'bold',
+                                  backgroundColor: wait.status === 'accepted' ? '#d1e7dd' : 
+                                                   (wait.status === 'declined' || wait.status === 'expired') ? '#f8d7da' : '#fff3cd', 
+                                  color: wait.status === 'accepted' ? '#0f5132' : 
+                                         (wait.status === 'declined' || wait.status === 'expired') ? '#842029' : '#856404'
                                 }}>
-                                  {wait.status === 'waiting' ? 'În așteptare' : wait.status === 'accepted' ? 'Asignat ✓' : wait.status}
+                                  {wait.status === 'waiting' ? 'În așteptare' : 
+                                   wait.status === 'accepted' ? 'Asignat ✓' : 
+                                   (wait.status === 'declined' || wait.status === 'expired') ? 'Refuzat ✗' : wait.status}
                                 </span>
                               </td>
                               <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -802,7 +818,6 @@ function Dashboard({ onLogout }) {
                         {/* BUTOANE PENTRU ADMIN ȘI UTILIZATORI */}
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0, whiteSpace: 'nowrap' }}>
                           
-                          {/* ADMIN: Buton de Finalizare / Reactivare */}
                           {(currentUser?.role === 'admin' || currentUser?.role === 'ADMIN') && (
                             <>
                               <button 
@@ -834,7 +849,6 @@ function Dashboard({ onLogout }) {
                             </>
                           )}
 
-                          {/* USER: Buton Programează-te */}
                           <button 
                             disabled={!camp.is_active}
                             onClick={(e) => {
@@ -916,7 +930,32 @@ function Dashboard({ onLogout }) {
         )}
       </div>
 
-      {/* POP-UP REMINDER CONFIRMATION */}
+      {/* POP-UP AUTOMAT: CONFIRMARE DIRECTĂ DIN EMAIL */}
+      {waitlistPopup.isOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '10px', maxWidth: '450px', width: '90%', boxShadow: '0 4px 25px rgba(0,0,0,0.3)', textAlign: 'center', fontFamily: 'sans-serif' }}>
+            <div style={{ fontSize: '50px', marginBottom: '10px' }}>🎉</div>
+            <h3 style={{ margin: '0 0 10px 0', color: '#2b2d42' }}>Loc Liber Disponibil!</h3>
+            <p style={{ color: '#555', fontSize: '15px', lineHeight: '1.5', marginBottom: '20px' }}>
+              S-a eliberat locul de la ora <strong style={{ color: '#e63946', fontSize: '18px' }}>{waitlistPopup.slot}</strong>. Dorești să confirmi această programare?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => handleDeclineWaitlistOffer(waitlistPopup.waitId)} 
+                style={{ padding: '10px 20px', backgroundColor: '#f1f3f5', color: '#dc3545', border: '1px solid #dc3545', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                Refuză Locul
+              </button>
+              <button 
+                onClick={handleAcceptWaitlistOffer} 
+                style={{ padding: '10px 24px', backgroundColor: '#198754', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                Acceptă Programarea!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REMINDER CONFIRMATION */}
       {reminderConfirmModal.isOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', maxWidth: '450px', width: '90%', boxShadow: '0 4px 25px rgba(0,0,0,0.2)', textAlign: 'center', fontFamily: 'sans-serif' }}>
@@ -942,7 +981,7 @@ function Dashboard({ onLogout }) {
         </div>
       )}
 
-      {/* POP-UP REMINDER RESULT */}
+      {/* MODAL REMINDER RESULT */}
       {reminderResultModal.isOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', maxWidth: '420px', width: '90%', boxShadow: '0 4px 25px rgba(0,0,0,0.2)', textAlign: 'center', fontFamily: 'sans-serif' }}>
@@ -970,6 +1009,15 @@ function Dashboard({ onLogout }) {
           myAppointments={myAppointments}
           onClose={() => setShowProfileModal(false)}
           onUserUpdated={(updatedUser) => setCurrentUser(updatedUser)}
+        />
+      )}
+
+      {/* MODAL OBSERVAȚII MEDICALE PER DONATOR */}
+      {selectedDonorForNotes && (
+        <DonorNotesModal 
+          donor={selectedDonorForNotes} 
+          onClose={() => setSelectedDonorForNotes(null)} 
+          onNotesUpdated={fetchData} 
         />
       )}
 
@@ -1017,13 +1065,15 @@ function Dashboard({ onLogout }) {
           </div>
         </div>
       )}
+
+      {/* INTEGRAREA AIChatbox CU EVENT PENTRU DESCHIDEREA PROGRAMĂRILOR */}
       <AIChatbox onSelectCampaign={(campaignId) => {
-          const selected = campaigns.find(c => c.id === parseInt(campaignId, 10));
-          if (selected && selected.is_active) {
-            setSelectedCampaign(selected);
-          }
-        }} 
-      />
+        const selected = campaigns.find(c => c.id === parseInt(campaignId, 10));
+        if (selected && selected.is_active) {
+          setSelectedCampaign(selected);
+        }
+      }} />
+
     </div>
   );
 }

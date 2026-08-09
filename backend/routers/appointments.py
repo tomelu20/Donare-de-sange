@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import List
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import os
 
 from database import get_db
 from schemas.schemas import AppointmentCreate, AppointmentOut
@@ -13,18 +16,109 @@ router = APIRouter(
     tags=["Appointments"]
 )
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+# ------------------------------------------------------------------------
+# UTILITAR EMAIL NOTIFICARE WAITLIST CU BUTOANE DE ACCEPТARE / REFUZ
+# ------------------------------------------------------------------------
+def send_waitlist_notification_email(to_email: str, donor_name: str, campaign_title: str, slot_time: str, waitlist_id: int):
+    email_user = os.getenv("EMAIL_USER")
+    email_password = os.getenv("EMAIL_PASSWORD")
+    
+    if not email_user or not email_password:
+        print("[CRITICAL] Datele de logare pentru Gmail lipsesc din .env!")
+        return
+        
+    slot_time_formatted = str(slot_time)[:5]
+    
+    # Link unic către platformă care declanșează pop-up-ul automat la logare/accesare
+    app_link = f"{FRONTEND_URL}?waitlist_offer=true&wait_id={waitlist_id}&slot={slot_time_formatted}"
+
+    message = MIMEMultipart()
+    message["From"] = f"Donare Sange <{email_user}>"
+    message["To"] = to_email
+    message["Subject"] = f"🎉 Loc Eliberat la ora {slot_time_formatted}! - {campaign_title}"
+    
+    corp_email = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; background-color: #f4f4f9; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <div style="background-color: #e63946; color: white; padding: 20px; text-align: center;">
+                    <h2 style="margin: 0; font-size: 22px;">🩸 Loc Eliberat!</h2>
+                </div>
+                <div style="padding: 25px;">
+                    <p style="font-size: 16px;">Salut, <strong>{donor_name}</strong>!</p>
+                    <p style="font-size: 15px;">S-a eliberat locul de la ora <strong style="color: #e63946; font-size: 18px;">{slot_time_formatted}</strong> pentru campania <strong>{campaign_title}</strong>.</p>
+                    
+                    <p style="font-size: 15px; margin-top: 20px;">Intră în contul tău pentru a accepta sau refuza locul eliberat:</p>
+
+                    <div style="margin: 30px 0; text-align: center;">
+                        <a href="{app_link}" style="background-color: #e63946; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block;">
+                            👉 Intră în Aplicație pentru Confirmare
+                        </a>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: #777; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
+                        Dacă refuzi oferta din aplicație, locul va fi redirecționat automat către următoarea persoană din lista de așteptare.
+                    </p>
+                </div>
+            </div>
+        </body>
+    </html>
+    """
+    message.attach(MIMEText(corp_email, "html"))
+    
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(email_user, email_password)
+        server.sendmail(email_user, to_email, message.as_string())
+        server.quit()
+        print(f"[Waitlist Email Success] Notificare trimisă către {to_email}")
+    except Exception as e:
+        print(f"[Waitlist Email Error] Eroare la trimiterea mail-ului către {to_email}: {e}")
+def notify_next_in_waitlist(campaign_id: int, slot_time: str, background_tasks: BackgroundTasks, db: Session):
+    # 1. Trecem donatorii care au refuzat anterior ('declined' / 'expired') înapoi în 'waiting' 
+    #    pentru ca la O NOUĂ anulare să aibă șansa să primească noul interval orar
+    db.execute(text("""
+        UPDATE waitlist 
+        SET status = 'waiting' 
+        WHERE campaign_id = :camp_id AND status IN ('declined', 'expired', 'notified')
+    """), {"camp_id": campaign_id})
+    db.commit()
+
+    # 2. Căutăm strictly URMĂTORUL donator cu status = 'waiting' (ordonat după ID)
+    waitlist_query = text("""
+        SELECT TOP 1 w.id, w.email, w.name, w.surname, c.title AS campaign_title
+        FROM waitlist w
+        JOIN campaigns c ON w.campaign_id = c.id
+        WHERE w.campaign_id = :camp_id AND w.status = 'waiting'
+        ORDER BY w.id ASC
+    """)
+    next_in_waitlist = db.execute(waitlist_query, {"camp_id": campaign_id}).fetchone()
+
+    # 3. Dacă am găsit o persoană în așteptare, îi trimitem mail-ul și îi marcăm statusul în 'notified'
+    if next_in_waitlist:
+        background_tasks.add_task(
+            send_waitlist_notification_email,
+            to_email=next_in_waitlist.email,
+            donor_name=f"{next_in_waitlist.name} {next_in_waitlist.surname}",
+            campaign_title=next_in_waitlist.campaign_title,
+            slot_time=str(slot_time),
+            waitlist_id=next_in_waitlist.id
+        )
+
+        db.execute(text("UPDATE waitlist SET status = 'notified' WHERE id = :wait_id"), {"wait_id": next_in_waitlist.id})
+        db.commit()
+
 @router.post("/", response_model=AppointmentOut, status_code=status.HTTP_201_CREATED)
 def create_appointment(appointment_data: AppointmentCreate, db: Session = Depends(get_db)):
     current_user_id = appointment_data.user_id
 
-    # ------------------------------------------------------------------------
-    # VALIDARE: VERIFICARE DUPLICARE PROGRAMARE (SECURIZATĂ PENTRU CONTURI ȘI INVITAȚI)
-    # ------------------------------------------------------------------------
     if appointment_data.is_for_someone_else:
         if not appointment_data.guest_phone:
             raise HTTPException(status_code=400, detail="Numărul de telefon al persoanei programate este obligatoriu.")
             
-        # 1. Verificăm dacă există deja o altă programare de tip INVITE cu acest număr de telefon
         guest_check_query = text("""
             SELECT COUNT(id) AS existing_count 
             FROM appointments 
@@ -43,8 +137,6 @@ def create_appointment(appointment_data: AppointmentCreate, db: Session = Depend
                 detail=f"Persoana cu numărul de telefon {appointment_data.guest_phone} are deja o programare activă ca invitat în această campanie!"
             )
 
-        # 2. CAZUL NOU DIN IMAGINE: Verificăm dacă numărul aparține unui cont înregistrat (ex: Popescu Ion) 
-        # și dacă acel cont are deja o programare personală activă în campanie.
         account_holder_check_query = text("""
             SELECT COUNT(a.id) AS existing_count
             FROM appointments a
@@ -66,7 +158,6 @@ def create_appointment(appointment_data: AppointmentCreate, db: Session = Depend
             )
             
     else:
-        # Logica standard: Utilizatorul curent dorește să se programeze pe el însuși
         user_check_query = text("""
             SELECT COUNT(id) AS existing_count 
             FROM appointments 
@@ -83,10 +174,9 @@ def create_appointment(appointment_data: AppointmentCreate, db: Session = Depend
         if user_check.existing_count > 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ai deja o programare activă în această campanie! Te poți programa în alte campanii, dar doar o singură dată per locație."
+                detail="Ai deja o programare activă în această campanie!"
             )
 
-        # 3. CAZUL INVERS: Verificăm dacă cineva nu l-a programat deja pe utilizatorul curent ca invitat (folosind telefonul lui din profil)
         user_profile_query = text("SELECT phone FROM users WHERE id = :user_id")
         user_profile = db.execute(user_profile_query, {"user_id": current_user_id}).fetchone()
         
@@ -110,9 +200,6 @@ def create_appointment(appointment_data: AppointmentCreate, db: Session = Depend
                     detail="Nu te poți programa deoarece un alt utilizator te-a înscris deja ca invitat în această campanie!"
                 )
 
-    # ------------------------------------------------------------------------
-    # RESTUL LOGICII DE INSERARE RĂMÂNE NESCHIMBAT
-    # ------------------------------------------------------------------------
     campaign_query = text("SELECT capacity_per_slot, is_active FROM campaigns WHERE id = :camp_id")
     campaign = db.execute(campaign_query, {"camp_id": appointment_data.campaign_id}).fetchone()
     
@@ -159,11 +246,18 @@ def create_appointment(appointment_data: AppointmentCreate, db: Session = Depend
         "g_name": appointment_data.guest_name,
         "g_surname": appointment_data.guest_surname,
         "g_phone": appointment_data.guest_phone,
-        "g_email": appointment_data.guest_email, # <--- ADĂUGAT
+        "g_email": appointment_data.guest_email,
         "g_blood": appointment_data.guest_blood_group
     })
     
     row = result.mappings().first()
+
+    # Dacă înscrierea s-a făcut din waitlist, modificăm statusul în 'accepted'
+    db.execute(text("UPDATE waitlist SET status = 'accepted' WHERE user_id = :u_id AND campaign_id = :c_id"), {
+        "u_id": current_user_id,
+        "c_id": appointment_data.campaign_id
+    })
+
     db.commit()
     
     return {
@@ -175,26 +269,72 @@ def create_appointment(appointment_data: AppointmentCreate, db: Session = Depend
         "created_at": row["created_at"]
     }
 
+
 @router.put("/{id}/cancel", status_code=status.HTTP_200_OK)
-def cancel_appointment(id: int, db: Session = Depends(get_db)):
-    # Modificăm statusul în 'cancelled' pentru a elibera locul
+def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    app_query = text("SELECT campaign_id, slot_time FROM appointments WHERE id = :app_id")
+    app_row = db.execute(app_query, {"app_id": id}).fetchone()
+    
+    if not app_row:
+        raise HTTPException(status_code=404, detail="Programarea nu a fost găsită.")
+
+    campaign_id = app_row.campaign_id
+    slot_time = app_row.slot_time
+
     cancel_query = text("""
         UPDATE appointments 
         SET status = 'cancelled' 
         WHERE id = :app_id
     """)
-    
-    result = db.execute(cancel_query, {"app_id": id})
+    db.execute(cancel_query, {"app_id": id})
+
+    # Căutăm automat următorul din waitlist și îi trimitem mail
+    notify_next_in_waitlist(campaign_id, str(slot_time), background_tasks, db)
+
     db.commit()
-    
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Programarea nu a fost găsită.")
-        
     return {"message": "Programarea a fost anulată cu succes."}
+
+
+# RUTA NOUĂ: Refuzarea locului oferit din waitlist -> Se notifică URMĂTORUL din listă
+@router.post("/waitlist/decline", status_code=status.HTTP_200_OK)
+def decline_waitlist_offer(wait_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    wait_query = text("SELECT campaign_id FROM waitlist WHERE id = :w_id")
+    wait_entry = db.execute(wait_query, {"w_id": wait_id}).fetchone()
+
+    if not wait_entry:
+        raise HTTPException(status_code=404, detail="Înregistrarea din lista de așteptare nu există.")
+
+    # Marcăm statusul ca 'expired' sau 'declined'
+    db.execute(text("UPDATE waitlist SET status = 'declined' WHERE id = :w_id"), {"w_id": wait_id})
+    db.commit()
+
+    # Trecem imediat la URMĂTORUL din lista de așteptare (fără a re-notifica persoana care tocmai a refuzat)
+    waitlist_query = text("""
+        SELECT TOP 1 w.id, w.email, w.name, w.surname, c.title AS campaign_title
+        FROM waitlist w
+        JOIN campaigns c ON w.campaign_id = c.id
+        WHERE w.campaign_id = :camp_id AND w.status = 'waiting'
+        ORDER BY w.id ASC
+    """)
+    next_in_waitlist = db.execute(waitlist_query, {"camp_id": wait_entry.campaign_id}).fetchone()
+
+    if next_in_waitlist:
+        background_tasks.add_task(
+            send_waitlist_notification_email,
+            to_email=next_in_waitlist.email,
+            donor_name=f"{next_in_waitlist.name} {next_in_waitlist.surname}",
+            campaign_title=next_in_waitlist.campaign_title,
+            slot_time="09:00:00",
+            waitlist_id=next_in_waitlist.id
+        )
+
+        db.execute(text("UPDATE waitlist SET status = 'notified' WHERE id = :wait_id"), {"wait_id": next_in_waitlist.id})
+        db.commit()
+
+    return {"message": "Ai refuzat oferta. Locul a fost pasat către următorul donator din lista de așteptare."}
 
 @router.get("/me", response_model=List[AppointmentOut])
 def get_my_appointments(user_id: int, db: Session = Depends(get_db)):
-    # Adăugăm a.is_for_someone_else = 0 pentru a exclude invitații din istoricul personal
     query = text("""
         SELECT 
             a.id, 
@@ -209,11 +349,12 @@ def get_my_appointments(user_id: int, db: Session = Depends(get_db)):
         JOIN campaigns c ON a.campaign_id = c.id
         WHERE a.user_id = :user_id 
           AND a.status != 'cancelled'
-          AND a.is_for_someone_else = 0  -- <-- FILTRARE ADĂUGATĂ AICI
+          AND a.is_for_someone_else = 0
         ORDER BY a.appointment_date DESC, a.slot_time DESC
     """)
     result = db.execute(query, {"user_id": user_id}).mappings().all()
     return result
+
 
 @router.get("/all", status_code=status.HTTP_200_OK)
 def get_all_appointments_for_admin(db: Session = Depends(get_db)):
@@ -223,7 +364,7 @@ def get_all_appointments_for_admin(db: Session = Depends(get_db)):
             a.slot_time,
             a.status,
             a.appointment_date AS campaign_date, 
-            a.notes, -- <-- CÂMP NOU SELECTAT
+            a.notes,
             CASE 
                 WHEN a.is_for_someone_else = 1 THEN a.guest_name 
                 ELSE u.name 
@@ -246,8 +387,10 @@ def get_all_appointments_for_admin(db: Session = Depends(get_db)):
     result = db.execute(query).mappings().all()
     return result
 
+
 class NoteUpdatePayload(BaseModel):
     notes: Optional[str] = None
+
 
 @router.put("/{id}/notes", status_code=status.HTTP_200_OK)
 def update_appointment_notes(id: int, payload: NoteUpdatePayload, db: Session = Depends(get_db)):
@@ -264,9 +407,9 @@ def update_appointment_notes(id: int, payload: NoteUpdatePayload, db: Session = 
         
     return {"message": "Observația a fost salvată cu succes."}
 
+
 @router.put("/{id}/attend", status_code=status.HTTP_200_OK)
 def attend_appointment(id: int, db: Session = Depends(get_db)):
-    # Modificăm statusul în 'attended' (Prezent)
     query = text("""
         UPDATE appointments 
         SET status = 'attended' 
@@ -283,7 +426,6 @@ def attend_appointment(id: int, db: Session = Depends(get_db)):
 
 @router.put("/{id}/noshow", status_code=status.HTTP_200_OK)
 def noshow_appointment(id: int, db: Session = Depends(get_db)):
-    # Modificăm statusul în 'no_show' (Absent)
     query = text("""
         UPDATE appointments 
         SET status = 'no_show' 
@@ -296,6 +438,7 @@ def noshow_appointment(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Programarea nu a fost găsită.")
         
     return {"message": "Donatorul a fost marcat ca absent."}
+
 
 @router.get("/top-donors", status_code=status.HTTP_200_OK)
 def get_top_donors(db: Session = Depends(get_db)):
@@ -329,6 +472,7 @@ def get_top_donors(db: Session = Depends(get_db)):
     result = db.execute(query).mappings().all()
     return result
 
+
 @router.get("/donor-history", status_code=status.HTTP_200_OK)
 def get_donor_history(phone: str, db: Session = Depends(get_db)):
     query = text("""
@@ -347,7 +491,7 @@ def get_donor_history(phone: str, db: Session = Depends(get_db)):
             OR 
             (a.is_for_someone_else = 0 AND u.phone = :phone)
         )
-        AND a.status NOT IN ('cancelled', 'no_show') -- <-- Excludem anulate și absente
+        AND a.status NOT IN ('cancelled', 'no_show')
         ORDER BY a.appointment_date DESC, a.slot_time DESC
     """)
     rows = db.execute(query, {"phone": phone}).mappings().all()
