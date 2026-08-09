@@ -328,3 +328,39 @@ def get_top_donors(db: Session = Depends(get_db)):
     """)
     result = db.execute(query).mappings().all()
     return result
+
+@router.get("/donor-history", status_code=status.HTTP_200_OK)
+def get_donor_history(phone: str, db: Session = Depends(get_db)):
+    query = text("""
+        SELECT 
+            a.id AS appointment_id,
+            a.slot_time,
+            a.status,
+            a.appointment_date AS campaign_date, 
+            a.notes,
+            c.title AS campaign_title
+        FROM appointments a
+        JOIN campaigns c ON a.campaign_id = c.id
+        LEFT JOIN users u ON a.user_id = u.id
+        WHERE (
+            (a.is_for_someone_else = 1 AND a.guest_phone = :phone)
+            OR 
+            (a.is_for_someone_else = 0 AND u.phone = :phone)
+        )
+        AND a.status NOT IN ('cancelled', 'no_show') -- <-- Excludem anulate și absente
+        ORDER BY a.appointment_date DESC, a.slot_time DESC
+    """)
+    rows = db.execute(query, {"phone": phone}).mappings().all()
+    
+    history = []
+    for r in rows:
+        history.append({
+            "appointment_id": r["appointment_id"],
+            "slot_time": str(r["slot_time"])[:5] if r["slot_time"] else "",
+            "status": r["status"],
+            "campaign_date": str(r["campaign_date"]) if r["campaign_date"] else "",
+            "notes": r["notes"],
+            "campaign_title": r["campaign_title"]
+        })
+        
+    return history
