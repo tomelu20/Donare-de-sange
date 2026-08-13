@@ -1,14 +1,39 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from config import settings
 import os
 from dotenv import load_dotenv
 
 # Această linie trebuie să fie prima, înainte de a importa routerele!
 load_dotenv()
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from apscheduler.schedulers.background import BackgroundScheduler
+
+from config import settings
 from routers import auth, campaigns, appointments, eligibility, waitlist, ai, reminders
 
-app = FastAPI(title="Donare Sange API")
+# Importăm funcția de verificare a expirării ofertelor din waitlist
+from routers.appointments import check_expired_waitlist_offers
+
+# Inițializare scheduler pentru task-uri în fundal
+scheduler = BackgroundScheduler()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Porniți verificarea periodică la fiecare 1 minut
+    scheduler.add_job(check_expired_waitlist_offers, 'interval', minutes=1)
+    scheduler.start()
+    print("[APScheduler] Task-ul automat de verificare pentru expirarea ofertelor din waitlist a fost pornit.")
+    
+    yield
+    
+    scheduler.shutdown()
+    print("[APScheduler] Task-ul automat din fundal a fost oprit.")
+
+app = FastAPI(
+    title="Donare Sange API",
+    lifespan=lifespan
+)
 
 # Configurare CORS folosind lista din setări
 origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",")]
@@ -21,7 +46,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Includem routerele noastre
+# Includem routerele aplicației
 app.include_router(auth.router)
 app.include_router(campaigns.router)
 app.include_router(appointments.router)

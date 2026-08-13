@@ -129,6 +129,7 @@ function Dashboard({ onLogout }) {
       fetchData();
       setTimeout(() => setSuccessNotification(''), 4000);
     } catch (err) {
+      // Afișează mesajul specific returnat de server (ex: "Din cauză că nu ai răspuns în timp util...")
       setApiError(err.response?.data?.detail || 'Eroare la confirmarea programării.');
       setWaitlistPopup({ isOpen: false, waitId: null, slot: '' });
     }
@@ -143,7 +144,7 @@ function Dashboard({ onLogout }) {
       fetchData();
       setTimeout(() => setSuccessNotification(''), 4000);
     } catch (err) {
-      setApiError('Nu s-a putut procesa refuzul orarului.');
+      setApiError(err.response?.data?.detail || 'Nu s-a putut procesa refuzul orarului.');
       setWaitlistPopup({ isOpen: false, waitId: null, slot: '' });
     }
   };
@@ -632,8 +633,9 @@ function Dashboard({ onLogout }) {
                                          (wait.status === 'declined' || wait.status === 'expired') ? '#842029' : '#856404'
                                 }}>
                                   {wait.status === 'waiting' ? 'În așteptare' : 
+                                   wait.status === 'notified' ? 'Notificat 📩' :
                                    wait.status === 'accepted' ? 'Asignat ✓' : 
-                                   (wait.status === 'declined' || wait.status === 'expired') ? 'Refuzat ✗' : wait.status}
+                                   (wait.status === 'declined' || wait.status === 'expired') ? 'Refuzat / Expirat ✗' : wait.status}
                                 </span>
                               </td>
                               <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>

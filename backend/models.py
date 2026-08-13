@@ -96,7 +96,9 @@ class Waitlist(Base):
     preferred_time_range = Column(String(50), nullable=False)
     travel_time_minutes = Column(Integer, nullable=False)
     status = Column(Enum(WaitlistStatus, name="waitlist_status_check"), nullable=False, default=WaitlistStatus.WAITING)
-    
+    notified_at = Column(DateTime, nullable=True)
+    offered_slot_time = Column(Time, nullable=True)
+
     campaign = relationship("Campaign", back_populates="waitlist_entries")
     user = relationship("User", back_populates="waitlist_entries")
 
