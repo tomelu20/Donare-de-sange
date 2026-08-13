@@ -5,7 +5,10 @@ import ReactMarkdown from 'react-markdown';
 function AIChatbox({ onSelectCampaign }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { sender: 'ai', text: 'Salut! Sunt asistentul tău inteligent Don AI. Cu ce te pot ajuta astăzi în legătură cu donarea de sânge?' }
+    { 
+      sender: 'ai', 
+      text: 'Salut! Sunt Don AI, un asistent virtual bazat pe Inteligență Artificială. Conform reglementărilor UE (EU AI Act), te informez că interacționezi cu un sistem AI, iar informațiile furnizate sunt generate automat. Cu ce te pot ajuta astăzi în legătură cu donarea de sânge?' 
+    }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -189,6 +192,11 @@ function AIChatbox({ onSelectCampaign }) {
             )}
             
             <div ref={messagesEndRef} />
+          </div>
+
+          {/* Notificare de transparență conform EU AI Act Art. 50 */}
+          <div style={{ fontSize: '10px', color: '#666', textAlign: 'center', padding: '4px', backgroundColor: '#f0f0f0', borderTop: '1px solid #e2e8f0' }}>
+            🤖 Interacționezi cu un sistem AI (EU AI Act Art. 50). Informațiile sunt generate automat.
           </div>
         </div>
       )}
