@@ -19,10 +19,8 @@ function Dashboard({ onLogout }) {
   const [adminWaitlist, setAdminWaitlist] = useState([]); 
   const [topDonors, setTopDonors] = useState([]); 
   
-  // State pentru modalul de observații medicale per donator
   const [selectedDonorForNotes, setSelectedDonorForNotes] = useState(null);
 
-  // --- STATE-URI PENTRU FILTRARE, CĂUTARE ȘI PAGINARE ADMIN ---
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCampaignFilter, setSelectedCampaignFilter] = useState('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
@@ -45,11 +43,16 @@ function Dashboard({ onLogout }) {
   const [reminderConfirmModal, setReminderConfirmModal] = useState({ isOpen: false, campaign: null });
   const [reminderResultModal, setReminderResultModal] = useState({ isOpen: false, isSuccess: true, message: '' });
 
-  // --- STATE PENTRU POP-UP AUTOMAT WAITLIST (CONFIRMARE DIRECTĂ DIN EMAIL) ---
+  // STATE-URI POP-UP WAITLIST
   const [waitlistPopup, setWaitlistPopup] = useState({
     isOpen: false,
     waitId: null,
     slot: ''
+  });
+
+  const [occupiedPopup, setOccupiedPopup] = useState({
+    isOpen: false,
+    message: ''
   });
 
   // Formular Campanie
@@ -69,19 +72,15 @@ function Dashboard({ onLogout }) {
       setLoading(true);
       setApiError('');
 
-      // 1. Preluăm toate campaniile
       const campaignsRes = await axios.get('http://127.0.0.1:8000/campaigns/');
       setCampaigns(campaignsRes.data);
 
-      // 2. Preluăm întrebările de eligibilitate
       const questionsRes = await axios.get('http://127.0.0.1:8000/eligibility/questions');
       setEligibilityQuestions(questionsRes.data);
 
-      // 3. Preluăm programările proprii
       const myAppsRes = await axios.get(`http://127.0.0.1:8000/appointments/me?user_id=${currentUser.id}`);
       setMyAppointments(myAppsRes.data);
 
-      // 4. Dacă utilizatorul este Admin, preluăm datele administrative globale
       if (currentUser.role === 'admin' || currentUser.role === 'ADMIN') {
         const adminAppsRes = await axios.get('http://127.0.0.1:8000/appointments/all');
         setAdminAppointments(adminAppsRes.data);
@@ -89,7 +88,6 @@ function Dashboard({ onLogout }) {
         const adminWaitlistRes = await axios.get('http://127.0.0.1:8000/waitlist/all');
         setAdminWaitlist(adminWaitlistRes.data);
 
-        // Preluăm clasamentul celor mai activi donatori
         const topDonorsRes = await axios.get('http://127.0.0.1:8000/appointments/top-donors');
         setTopDonors(topDonorsRes.data);
       }
@@ -110,17 +108,33 @@ function Dashboard({ onLogout }) {
     const slot = params.get('slot');
 
     if (isWaitlistOffer === 'true' && waitId && slot) {
-      setWaitlistPopup({
-        isOpen: true,
-        waitId: waitId,
-        slot: slot
-      });
-      // Curățăm parametrii din URL
+      // Verificăm dacă locul mai este disponibil înainte de afișarea pop-up-ului de Accept/Refuz
+      axios.get(`http://127.0.0.1:8000/waitlist/${waitId}/check-offer?slot_time=${slot}:00`)
+        .then(res => {
+          if (res.data.available && !res.data.already_accepted) {
+            setWaitlistPopup({
+              isOpen: true,
+              waitId: waitId,
+              slot: slot
+            });
+          } else if (!res.data.available) {
+            setOccupiedPopup({
+              isOpen: true,
+              message: res.data.message
+            });
+          } else if (res.data.already_accepted) {
+            setSuccessNotification('Ai confirmat deja această programare!');
+            setTimeout(() => setSuccessNotification(''), 4000);
+          }
+        })
+        .catch(err => {
+          setApiError('Nu s-a putut verifica disponibilitatea locului.');
+        });
+
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
-  // Confirmare directă din Pop-up (Adaugă instant în centralizator)
   const handleAcceptWaitlistOffer = async () => {
     try {
       const res = await axios.post(`http://127.0.0.1:8000/waitlist/${waitlistPopup.waitId}/assign?slot_time=${waitlistPopup.slot}:00`);
@@ -129,13 +143,14 @@ function Dashboard({ onLogout }) {
       fetchData();
       setTimeout(() => setSuccessNotification(''), 4000);
     } catch (err) {
-      // Afișează mesajul specific returnat de server (ex: "Din cauză că nu ai răspuns în timp util...")
-      setApiError(err.response?.data?.detail || 'Eroare la confirmarea programării.');
       setWaitlistPopup({ isOpen: false, waitId: null, slot: '' });
+      setOccupiedPopup({
+        isOpen: true,
+        message: err.response?.data?.detail || 'Eroare la confirmarea programării.'
+      });
     }
   };
 
-  // Refuz direct din Pop-up (Pasează locul următoarei persoane)
   const handleDeclineWaitlistOffer = async (waitId) => {
     try {
       const res = await axios.post(`http://127.0.0.1:8000/appointments/waitlist/decline?wait_id=${waitId}`);
@@ -149,7 +164,6 @@ function Dashboard({ onLogout }) {
     }
   };
 
-  // --- LOGICĂ PENTRU FILTRARE ȘI PAGINARE ---
   const filteredAppointments = adminAppointments.filter(app => {
     const fullName = `${app.donor_name || ''} ${app.donor_surname || ''}`.toLowerCase();
     const phone = `${app.donor_phone || ''}`;
@@ -404,7 +418,6 @@ function Dashboard({ onLogout }) {
                     📋 Centralizator Management Programări (Vizualizare Medicală)
                   </h3>
 
-                  {/* BARĂ DE FILTRARE & CĂUTARE */}
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', gap: '15px', marginBottom: '20px', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '6px', border: '1px solid #eee' }}>
                     
                     <div>
@@ -507,7 +520,6 @@ function Dashboard({ onLogout }) {
                         </table>
                       </div>
 
-                      {/* CONTROALE PAGINARE */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #eee' }}>
                         <span style={{ fontSize: '13px', color: '#666' }}>
                           Afișare <strong>{indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredAppointments.length)}</strong> din <strong>{filteredAppointments.length}</strong> programări
@@ -780,7 +792,6 @@ function Dashboard({ onLogout }) {
                 </section>
               )}
               
-              {/* VIZUALIZARE CAMPANII ACTIVE ȘI ISTORIC (FINALIZATE) */}
               <main style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e1e4e8' }}>
                 <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px' }}>📍 Campanii de Donare & Istoric</h3>
                 {campaigns.length === 0 ? (
@@ -817,7 +828,6 @@ function Dashboard({ onLogout }) {
                           </div>
                         </div>
 
-                        {/* BUTOANE PENTRU ADMIN ȘI UTILIZATORI */}
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0, whiteSpace: 'nowrap' }}>
                           
                           {(currentUser?.role === 'admin' || currentUser?.role === 'ADMIN') && (
@@ -877,7 +887,6 @@ function Dashboard({ onLogout }) {
                 )}
               </main>
 
-              {/* PROGRAMĂRILE MELE (DONATORI) */}
               {currentUser?.role !== 'admin' && currentUser?.role !== 'ADMIN' && (
                 <aside style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e1e4e8' }}>
                   <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -932,7 +941,7 @@ function Dashboard({ onLogout }) {
         )}
       </div>
 
-      {/* POP-UP AUTOMAT: CONFIRMARE DIRECTĂ DIN EMAIL */}
+      {/* POP-UP AUTOMAT: CONFIRMARE DIRECTĂ DIN EMAIL (DACA LOCUL E LIBER) */}
       {waitlistPopup.isOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '10px', maxWidth: '450px', width: '90%', boxShadow: '0 4px 25px rgba(0,0,0,0.3)', textAlign: 'center', fontFamily: 'sans-serif' }}>
@@ -953,6 +962,24 @@ function Dashboard({ onLogout }) {
                 Acceptă Programarea!
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* POP-UP AUTOMAT: LOC OCUPAT / TIMP EXPIRAT */}
+      {occupiedPopup.isOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '10px', maxWidth: '450px', width: '90%', boxShadow: '0 4px 25px rgba(0,0,0,0.3)', textAlign: 'center', fontFamily: 'sans-serif' }}>
+            <div style={{ fontSize: '50px', marginBottom: '10px' }}>⏳</div>
+            <h3 style={{ margin: '0 0 10px 0', color: '#e63946' }}>Programare Indisponibilă</h3>
+            <p style={{ color: '#555', fontSize: '15px', lineHeight: '1.5', marginBottom: '25px' }}>
+              {occupiedPopup.message}
+            </p>
+            <button 
+              onClick={() => setOccupiedPopup({ isOpen: false, message: '' })} 
+              style={{ padding: '10px 24px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+              Am înțeles
+            </button>
           </div>
         </div>
       )}
@@ -1014,7 +1041,6 @@ function Dashboard({ onLogout }) {
         />
       )}
 
-      {/* MODAL OBSERVAȚII MEDICALE PER DONATOR */}
       {selectedDonorForNotes && (
         <DonorNotesModal 
           donor={selectedDonorForNotes} 
@@ -1068,7 +1094,6 @@ function Dashboard({ onLogout }) {
         </div>
       )}
 
-      {/* INTEGRAREA AIChatbox CU EVENT PENTRU DESCHIDEREA PROGRAMĂRILOR */}
       <AIChatbox onSelectCampaign={(campaignId) => {
         const selected = campaigns.find(c => c.id === parseInt(campaignId, 10));
         if (selected && selected.is_active) {
