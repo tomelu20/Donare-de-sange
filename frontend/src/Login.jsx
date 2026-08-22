@@ -15,23 +15,32 @@ function Login({ onSwitch, onLoginSuccess }) {
     setLoading(true);
     
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
-        email: email.trim(),
-        password: password
-      });
+      const response = await axios.post(
+        `${API_BASE_URL}/auth/login`,
+        {
+          email: email.trim(),
+          password: password
+        },
+        { withCredentials: true }
+      );
       
-      // Store standard JWT access token and user info
-      sessionStorage.setItem('access_token', response.data.access_token);
+      // Store session payload for frontend UI components
       sessionStorage.setItem('user_session', JSON.stringify(response.data.user));
       
-      // Attach the token by default for future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+      if (response.data.access_token) {
+        sessionStorage.setItem('access_token', response.data.access_token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+      }
       
       if (onLoginSuccess) {
         onLoginSuccess();
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'A apărut o eroare la logare.');
+      if (err.response?.status === 429) {
+        setError('Prea multe încercări. Vă rugăm să așteptați câteva minute.');
+      } else {
+        setError(err.response?.data?.detail || 'A apărut o eroare la logare.');
+      }
     } finally {
       setLoading(false);
     }
