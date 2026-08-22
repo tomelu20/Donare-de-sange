@@ -1,15 +1,21 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-import random
-from datetime import datetime, timedelta
 import os
-from database import get_db
-from schemas.schemas import UserCreate, UserLogin, UserOut
-from models import User
+import random
+import smtplib
+from datetime import datetime, timedelta, timezone
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 from passlib.context import CryptContext
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from database import get_db
+from models import User
+from schemas.schemas import UserCreate, UserLogin, UserOut
 
 router = APIRouter(
     prefix="/auth",
@@ -17,9 +23,43 @@ router = APIRouter(
 )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# Stocare temporară în memoria RAM pentru codurile trimise pe EMAIL[cite: 2]
+# JWT configuration
+SECRET_KEY = os.getenv("SECRET_KEY", "CHANGE_THIS_TO_A_VERY_STRONG_SECRET_IN_PRODUCTION")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+# Temporary verification store
 email_verification_store = {}
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Sesiune invalidă sau expirată.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+        
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
 
 def send_email_via_gmail(to_email: str, code: str):
     email_user = os.getenv("EMAIL_USER")
@@ -47,7 +87,6 @@ def send_email_via_gmail(to_email: str, code: str):
     message.attach(MIMEText(corp_email, "html"))
     
     try:
-        # Ne conectăm gratuit la serverul SMTP Google securizat
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(email_user, email_password)
@@ -58,6 +97,7 @@ def send_email_via_gmail(to_email: str, code: str):
     except Exception as e:
         print(f"[Email Exception] Eroare la trimiterea mailului: {e}")
         return False
+
 
 @router.post("/send-email-code")
 def send_email_code(email: str):
@@ -83,6 +123,7 @@ def send_email_code(email: str):
         )
         
     return {"detail": "Codul de verificare a fost trimis pe email."}
+
 
 @router.post("/verify-email-code")
 def verify_email_code(email: str, email_code: str):
@@ -110,11 +151,11 @@ def verify_email_code(email: str, email_code: str):
     email_verification_store[email]["verified"] = True
     return {"detail": "Adresa de email a fost verificată cu succes!"}
 
+
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     email = user_data.email
     
-    # Validăm dacă emailul a trecut prin procesul de verificare
     verification_data = email_verification_store.get(email)
     if not verification_data or not verification_data.get("verified"):
         raise HTTPException(
@@ -122,11 +163,10 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="Trebuie să vă verificați adresa de email înainte de înregistrare."
         )
 
-    # Verifică dacă email-ul există deja în baza de date[cite: 2]
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Acest email este deja înregistrat."
         )
     
@@ -148,24 +188,32 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     email_verification_store.pop(email, None)
     return new_user
 
-@router.post("/login", response_model=UserOut)
+
+@router.post("/login")
 def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_credentials.email).first()
-    if not user:
+    
+    # Unified 401 error prevents user enumeration
+    if not user or not pwd_context.verify(user_credentials.password, user.password_hash):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Date de conectare invalide."
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email sau parolă incorectă."
         )
     
-    if not pwd_context.verify(user_credentials.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Date de conectare invalide."
-        )
-    return user
+    access_token = create_access_token(data={"sub": str(user.id)})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "surname": user.surname,
+            "blood_group": user.blood_group
+        }
+    }
 
-from pydantic import BaseModel
-from typing import Optional
 
 class UserUpdatePayload(BaseModel):
     name: str
@@ -173,17 +221,18 @@ class UserUpdatePayload(BaseModel):
     phone: str
     blood_group: str
 
-@router.put("/users/{user_id}", response_model=UserOut)
-def update_user_profile(user_id: int, payload: UserUpdatePayload, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Utilizatorul nu a fost găsit.")
-        
-    user.name = payload.name
-    user.surname = payload.surname
-    user.phone = payload.phone
-    user.blood_group = payload.blood_group
+
+@router.put("/users/me", response_model=UserOut)
+def update_user_profile(
+    payload: UserUpdatePayload, 
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    current_user.name = payload.name
+    current_user.surname = payload.surname
+    current_user.phone = payload.phone
+    current_user.blood_group = payload.blood_group
     
     db.commit()
-    db.refresh(user)
-    return user
+    db.refresh(current_user)
+    return current_user
