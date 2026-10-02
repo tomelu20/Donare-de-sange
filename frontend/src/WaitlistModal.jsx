@@ -20,9 +20,9 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
     setSuccess('');
 
     try {
+      // user_id a fost scos din payload, fiind extras în siguranță pe backend din token-ul JWT
       await axios.post('http://127.0.0.1:8000/waitlist/', {
         campaign_id: campaign.id,
-        user_id: user.id,
         name: user.name,
         surname: user.surname,
         phone: user.phone,

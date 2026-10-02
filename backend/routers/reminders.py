@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from sqlalchemy import text  # <--- Adăugat pentru query native securizate
+from sqlalchemy import text
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
 from database import get_db
 from models import User, Campaign
+from routers.auth import require_admin
 
 router = APIRouter(
     prefix="/reminders",
@@ -18,7 +19,6 @@ def send_reminder_email_task(email: str, name: str, campaign_title: str, locatio
     email_password = os.getenv("EMAIL_PASSWORD")
     
     if not email_user or not email_password:
-        print("[CRITICAL] Datele de logare pentru Gmail lipsesc din .env!")
         return
         
     message = MIMEMultipart()
@@ -42,12 +42,6 @@ def send_reminder_email_task(email: str, name: str, campaign_title: str, locatio
                         <p style="margin: 0 0 8px 0;">📅 <strong>Data:</strong> {date_str}</p>
                         <p style="margin: 0;">🕒 <strong>Interval orar:</strong> {time_str}</p>
                     </div>
-                    
-                    <p>Te rugăm să te prezinți cu 10-15 minute înainte de ora stabilită și să ai la tine un act de identitate valabil. Nu uita să te hidratezi bine înainte și să mănânci un mic dejun ușor (fără grăsimi)!</p>
-                    
-                    <p style="margin-top: 30px; font-size: 13px; color: #666; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-                        Dacă nu mai poți ajunge, te rugăm să anulezi programarea din dashboard pentru a elibera locul altui donator.
-                    </p>
                 </div>
             </div>
         </body>
@@ -61,31 +55,20 @@ def send_reminder_email_task(email: str, name: str, campaign_title: str, locatio
         server.login(email_user, email_password)
         server.sendmail(email_user, email, message.as_string())
         server.quit()
-        print(f"[Reminder Success] Email trimis către {email}")
     except Exception as e:
-        print(f"[Reminder Exception] Eroare la trimiterea mailului către {email}: {e}")
+        print(f"[Reminder Exception] {e}")
 
 @router.post("/campaign/{campaign_id}")
 def send_campaign_reminders(
     campaign_id: int, 
     background_tasks: BackgroundTasks, 
-    current_user_id: int,
+    admin_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    # 1. Verificare drepturi Admin
-    admin_user = db.query(User).filter(User.id == current_user_id).first()
-    if not admin_user or admin_user.role.lower() != 'admin':
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Doar administratorii pot trimite remaindere."
-        )
-        
-    # 2. Verificare existență campanie
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campania nu a fost găsită.")
         
-    # 3. Preluăm toate programările confirmate folosind SQL brut pentru a ocoli eroarea de mapare Enum din SQLAlchemy
     query = text("""
         SELECT id, user_id, slot_time, appointment_date, is_for_someone_else, 
                guest_name, guest_surname, guest_email 
@@ -98,25 +81,21 @@ def send_campaign_reminders(
     if not active_appointments:
         raise HTTPException(status_code=400, detail="Nu există programări active (confirmate) pentru această campanie.")
         
-    # 4. Trimitere asincronă în background cu rutare dinamică a mailului către cel programat
     sent_count = 0
     for app in active_appointments:
         target_email = None
         target_name = None
         
-        # Dacă este o programare făcută în numele altei persoane, trimitem direct la e-mailul invitatului
         if app["is_for_someone_else"]:
             if app["guest_email"]:
                 target_email = app["guest_email"]
                 target_name = f"{app['guest_name']} {app['guest_surname']}"
         else:
-            # Altfel, trimite către contul utilizatorului de bază
             donor = db.query(User).filter(User.id == app["user_id"]).first()
             if donor and donor.email:
                 target_email = donor.email
                 target_name = f"{donor.name} {donor.surname}"
                 
-        # Înregistrăm task-ul de trimitere asincronă dacă e-mailul și numele sunt valide
         if target_email and target_name:
             date_label = app["appointment_date"].strftime('%d-%m-%Y') if app["appointment_date"] else campaign.date.strftime('%d-%m-%Y')
             time_label = str(app["slot_time"])[:5]

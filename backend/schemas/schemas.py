@@ -77,7 +77,6 @@ class CampaignOut(BaseModel):
 class AppointmentCreate(BaseModel):
     campaign_id: int
     slot_time: time
-    user_id: int
     appointment_date: datetime_date
     is_for_someone_else: bool = False
     guest_name: Optional[str] = None

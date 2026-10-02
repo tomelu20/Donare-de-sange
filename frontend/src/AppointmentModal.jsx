@@ -43,7 +43,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
       setLoading(true);
       const response = await axios.get(`http://127.0.0.1:8000/campaigns/${campaign.id}/slots`);
       setSlots(response.data);
-    } catch (err) {
+    } catch {
       setError('Nu s-au putut încărca intervalele orare.');
     } finally {
       setLoading(false);
@@ -138,25 +138,24 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
         await axios.post(`http://127.0.0.1:8000/waitlist/${waitlistId}/assign?slot_time=${selectedSlot.time}`);
         setSuccess('Donatorul din lista de așteptare a fost asignat cu succes!');
       } else {
-        const savedUser = sessionStorage.getItem('user_session');
-        const user = savedUser ? JSON.parse(savedUser) : null;
-
-        if (!user || !user.id) {
-          setError('Eroare: Utilizatorul nu este autentificat corect.');
-          return;
-        }
-
-        await axios.post('http://127.0.0.1:8000/appointments/', {
-          campaign_id: campaign.id,
-          slot_time: selectedSlot.time,
-          user_id: user.id,
-          appointment_date: selectedSlot.date,
-          is_for_someone_else: isForSomeoneElse,
-          guest_name: isForSomeoneElse ? guestName : null,
-          guest_surname: isForSomeoneElse ? guestSurname : null,
-          guest_phone: isForSomeoneElse ? guestPhone : null,
-          guest_email: isForSomeoneElse ? guestEmail : null, 
-          guest_blood_group: isForSomeoneElse ? guestBloodGroup : "Nu știu"
+        // user_id a fost scos din payload, backend-ul preia utilizatorul direct din token-ul JWT securizat
+        await axios.post('http://127.0.0.1:8000/eligibility/submit', {
+          appointment: {
+            campaign_id: campaign.id,
+            slot_time: selectedSlot.time,
+            appointment_date: selectedSlot.date,
+            is_for_someone_else: isForSomeoneElse,
+            guest_name: isForSomeoneElse ? guestName : null,
+            guest_surname: isForSomeoneElse ? guestSurname : null,
+            guest_phone: isForSomeoneElse ? guestPhone : null,
+            guest_email: isForSomeoneElse ? guestEmail : null,
+            guest_blood_group: isForSomeoneElse ? guestBloodGroup : "Nu știu"
+            // Niciun user_id aici!
+          },
+          answers: Object.keys(checklist).map(qId => ({
+            question_id: parseInt(qId, 10),
+            answer_text: String(checklist[qId])
+          }))
         });
         
         setSuccess('Felicitări! Te-ai programat cu succes, poți să-ți vezi programarea în secțiunea Programările Mele.');

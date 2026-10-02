@@ -4,6 +4,8 @@ from sqlalchemy import text
 from datetime import datetime, timedelta
 from database import get_db
 from schemas.schemas import WaitlistCreate, WaitlistOut
+from routers.auth import get_current_user, require_admin
+from models import User
 
 router = APIRouter(
     prefix="/waitlist",
@@ -11,11 +13,13 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=WaitlistOut, status_code=status.HTTP_201_CREATED)
-def add_to_waitlist(waitlist_data: WaitlistCreate, db: Session = Depends(get_db)):
+def add_to_waitlist(
+    waitlist_data: WaitlistCreate, 
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    user_id = current_user.id
     
-    # ------------------------------------------------------------------------
-    # VALIDARE ABSOLUTĂ: Verificăm dacă are deja o programare activă în campanie
-    # ------------------------------------------------------------------------
     appointment_check_query = text("""
         SELECT COUNT(id) AS existing_appointments 
         FROM appointments 
@@ -24,7 +28,7 @@ def add_to_waitlist(waitlist_data: WaitlistCreate, db: Session = Depends(get_db)
           AND status IN ('confirmed', 'attended')
     """)
     appointment_check = db.execute(appointment_check_query, {
-        "user_id": waitlist_data.user_id,
+        "user_id": user_id,
         "campaign_id": waitlist_data.campaign_id
     }).fetchone()
 
@@ -34,7 +38,6 @@ def add_to_waitlist(waitlist_data: WaitlistCreate, db: Session = Depends(get_db)
             detail="Ai deja o programare activă confirmată în această campanie! Nu te poți înscrie în lista de așteptare."
         )
 
-    # Verificăm și dacă este deja înscris în waitlist pentru aceeași campanie
     waitlist_check_query = text("""
         SELECT COUNT(id) AS existing_waitlist 
         FROM waitlist 
@@ -43,7 +46,7 @@ def add_to_waitlist(waitlist_data: WaitlistCreate, db: Session = Depends(get_db)
           AND status = 'waiting'
     """)
     waitlist_check = db.execute(waitlist_check_query, {
-        "user_id": waitlist_data.user_id,
+        "user_id": user_id,
         "campaign_id": waitlist_data.campaign_id
     }).fetchone()
 
@@ -52,9 +55,7 @@ def add_to_waitlist(waitlist_data: WaitlistCreate, db: Session = Depends(get_db)
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Ești deja înscris în lista de așteptare pentru această campanie."
         )
-    # ------------------------------------------------------------------------
 
-    # Inserare SQL nativă în tabela 'waitlist'
     insert_query = text("""
         INSERT INTO waitlist (campaign_id, user_id, name, surname, phone, email, preferred_time_range, travel_time_minutes, status)
         OUTPUT INSERTED.id, INSERTED.campaign_id, INSERTED.user_id, INSERTED.name, INSERTED.surname, INSERTED.phone, INSERTED.email, INSERTED.preferred_time_range, INSERTED.travel_time_minutes, INSERTED.status
@@ -64,7 +65,7 @@ def add_to_waitlist(waitlist_data: WaitlistCreate, db: Session = Depends(get_db)
     try:
         result = db.execute(insert_query, {
             "campaign_id": waitlist_data.campaign_id,
-            "user_id": waitlist_data.user_id,
+            "user_id": user_id,
             "name": waitlist_data.name,
             "surname": waitlist_data.surname,
             "phone": waitlist_data.phone,
@@ -84,7 +85,10 @@ def add_to_waitlist(waitlist_data: WaitlistCreate, db: Session = Depends(get_db)
         )
 
 @router.get("/all", status_code=status.HTTP_200_OK)
-def get_all_waitlist_for_admin(db: Session = Depends(get_db)):
+def get_all_waitlist_for_admin(
+    admin_user: User = Depends(require_admin), 
+    db: Session = Depends(get_db)
+):
     query = text("""
         SELECT 
             w.id,
@@ -106,7 +110,6 @@ def get_all_waitlist_for_admin(db: Session = Depends(get_db)):
     return result
 
 
-# RUTA NOUĂ: Verifică dacă oferta din waitlist este încă disponibilă
 @router.get("/{id}/check-offer", status_code=status.HTTP_200_OK)
 def check_waitlist_offer(id: int, slot_time: str, db: Session = Depends(get_db)):
     query = text("""
@@ -123,7 +126,6 @@ def check_waitlist_offer(id: int, slot_time: str, db: Session = Depends(get_db))
     if offer.status == 'accepted':
         return {"available": True, "already_accepted": True, "message": "Ai confirmat deja această programare."}
 
-    # 1. Verificăm dacă timpul (12h / 24h) a expirat
     if offer.notified_at:
         now = datetime.now()
         days_left = (offer.campaign_date - now.date()).days
@@ -137,7 +139,6 @@ def check_waitlist_offer(id: int, slot_time: str, db: Session = Depends(get_db))
                 "message": "Din cauză că nu ai răspuns în timp util, am trimis programarea mai departe și locul s-a ocupat."
             }
 
-    # 2. Verificăm dacă slotul orar s-a ocupat între timp
     count_query = text("""
         SELECT COUNT(id) AS booked 
         FROM appointments 
@@ -162,7 +163,6 @@ def check_waitlist_offer(id: int, slot_time: str, db: Session = Depends(get_db))
     return {"available": True, "already_accepted": False, "message": "Locul este disponibil."}
 
 
-# Procesează asignarea din waitlist
 @router.post("/{id}/assign", status_code=status.HTTP_200_OK)
 def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depends(get_db)):
     wait_query = text("""
@@ -179,7 +179,6 @@ def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depend
     if wait_entry.status == 'accepted':
         raise HTTPException(status_code=400, detail="Ai confirmat deja această ofertă din lista de așteptare!")
 
-    # Verificăm dacă oferta a expirat
     if wait_entry.notified_at:
         now = datetime.now()
         days_left = (wait_entry.campaign_date - now.date()).days
@@ -194,7 +193,6 @@ def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depend
                 detail="Din cauză că nu ai răspuns în timp util, am trimis programarea mai departe și locul s-a ocupat."
             )
 
-    # Verificăm capacitatea pe slot
     count_query = text("""
         SELECT COUNT(id) AS booked 
         FROM appointments 

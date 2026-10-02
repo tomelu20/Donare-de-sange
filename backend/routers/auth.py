@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User
+from models import User, EmailVerificationCode, UserRole
 from schemas.schemas import UserCreate, UserLogin, UserOut
 
 limiter = Limiter(key_func=get_remote_address)
@@ -30,10 +30,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 SECRET_KEY = os.getenv("SECRET_KEY", "CHANGE_THIS_TO_A_VERY_STRONG_SECRET_IN_PRODUCTION")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 480
 IS_PRODUCTION = os.getenv("ENV", "development") == "production"
 
-email_verification_store = {}
 failed_login_tracker = {}
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_DURATION_MINUTES = 15
@@ -44,7 +43,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def get_current_user(request: Request, db: Session = Depends(get_db)):
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     token = request.cookies.get("access_token")
     if not token:
         auth_header = request.headers.get("Authorization")
@@ -69,6 +68,14 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Utilizatorul nu a fost găsit.")
     return user
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != UserRole.ADMIN and str(current_user.role).lower() != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acces interzis! Necesită rol de administrator."
+        )
+    return current_user
 
 def send_email_via_gmail(to_email: str, code: str):
     email_user = os.getenv("EMAIL_USER")
@@ -108,7 +115,7 @@ def send_email_via_gmail(to_email: str, code: str):
 
 @router.post("/send-email-code")
 @limiter.limit("5/minute")
-def send_email_code(request: Request, email: str):
+def send_email_code(request: Request, email: str, db: Session = Depends(get_db)):
     if not email or "@" not in email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -116,12 +123,19 @@ def send_email_code(request: Request, email: str):
         )
     
     code = f"{random.randint(100000, 999999)}"
-    email_verification_store[email] = {
-        "code": code,
-        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
-        "verified": False,
-        "attempts": 0
-    }
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+    
+    db.query(EmailVerificationCode).filter(EmailVerificationCode.email == email).delete()
+    
+    verification_entry = EmailVerificationCode(
+        email=email,
+        code=code,
+        expires_at=expires_at,
+        verified=False,
+        attempts=0
+    )
+    db.add(verification_entry)
+    db.commit()
     
     succes = send_email_via_gmail(email, code)
     if not succes:
@@ -134,8 +148,8 @@ def send_email_code(request: Request, email: str):
 
 @router.post("/verify-email-code")
 @limiter.limit("10/minute")
-def verify_email_code(request: Request, email: str, email_code: str):
-    verification_data = email_verification_store.get(email)
+def verify_email_code(request: Request, email: str, email_code: str, db: Session = Depends(get_db)):
+    verification_data = db.query(EmailVerificationCode).filter(EmailVerificationCode.email == email).first()
     
     if not verification_data:
         raise HTTPException(
@@ -143,28 +157,37 @@ def verify_email_code(request: Request, email: str, email_code: str):
             detail="Nu s-a solicitat niciun cod pentru această adresă."
         )
         
-    if datetime.now(timezone.utc) > verification_data["expires_at"]:
-        email_verification_store.pop(email, None)
+    now_utc = datetime.now(timezone.utc)
+    exp_at = verification_data.expires_at
+    if exp_at.tzinfo is None:
+        exp_at = exp_at.replace(tzinfo=timezone.utc)
+
+    if now_utc > exp_at:
+        db.delete(verification_data)
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Codul a expirat. Solicită un cod nou."
         )
         
-    if verification_data["attempts"] >= 3:
-        email_verification_store.pop(email, None)
+    if verification_data.attempts >= 3:
+        db.delete(verification_data)
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Prea multe încercări greșite. Solicită un nou cod."
         )
 
-    if verification_data["code"] != email_code:
-        verification_data["attempts"] += 1
+    if verification_data.code != email_code:
+        verification_data.attempts += 1
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Codul introdus este incorect."
         )
     
-    email_verification_store[email]["verified"] = True
+    verification_data.verified = True
+    db.commit()
     return {"detail": "Adresa de email a fost verificată cu succes!"}
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -172,8 +195,8 @@ def verify_email_code(request: Request, email: str, email_code: str):
 def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     email = user_data.email
     
-    verification_data = email_verification_store.get(email)
-    if not verification_data or not verification_data.get("verified"):
+    verification_data = db.query(EmailVerificationCode).filter(EmailVerificationCode.email == email).first()
+    if not verification_data or not verification_data.verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Trebuie să vă verificați adresa de email înainte de înregistrare."
@@ -206,7 +229,8 @@ def register(request: Request, user_data: UserCreate, db: Session = Depends(get_
     db.commit()
     db.refresh(new_user)
     
-    email_verification_store.pop(email, None)
+    db.delete(verification_data)
+    db.commit()
     return new_user
 
 @router.post("/login")
@@ -258,7 +282,8 @@ def login(request: Request, response: Response, user_credentials: UserLogin, db:
             "name": user.name,
             "surname": user.surname,
             "phone": user.phone,
-            "blood_group": user.blood_group
+            "blood_group": user.blood_group,
+            "role": user.role
         }
     }
 

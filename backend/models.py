@@ -51,7 +51,7 @@ class Campaign(Base):
     date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=True)
     start_time = Column(Time, nullable=False)
-    end_time = Column(Time, nullable=False)  # <--- MODIFICAT: Am adăugat coloana lipsă
+    end_time = Column(Time, nullable=False)
     slot_duration = Column(Integer, nullable=False)
     capacity_per_slot = Column(Integer, nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
@@ -69,7 +69,6 @@ class Appointment(Base):
     status = Column(Enum(AppointmentStatus, name="appointment_status_check"), nullable=False)
     created_at = Column(DateTime, server_default=text("GETDATE()"))
     
-    # --- CÂMPURI NOI PENTRU INVITAȚI ---
     is_for_someone_else = Column(Boolean, nullable=False, default=False)
     guest_name = Column(String(100), nullable=True)
     guest_surname = Column(String(100), nullable=True)
@@ -125,3 +124,13 @@ class EligibilityAnswer(Base):
     
     appointment = relationship("Appointment", back_populates="eligibility_answers")
     question = relationship("EligibilityQuestion", back_populates="answers")
+
+class EmailVerificationCode(Base):
+    __tablename__ = 'email_verification_codes'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(100), nullable=False)
+    code = Column(String(6), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    verified = Column(Boolean, nullable=False, default=False)
+    attempts = Column(Integer, nullable=False, default=0)

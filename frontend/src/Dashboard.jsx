@@ -72,13 +72,20 @@ function Dashboard({ onLogout }) {
       setLoading(true);
       setApiError('');
 
+      // Setează token-ul JWT global în Axios dacă există în sessionStorage
+      const token = sessionStorage.getItem('access_token');
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+
       const campaignsRes = await axios.get('http://127.0.0.1:8000/campaigns/');
       setCampaigns(campaignsRes.data);
 
       const questionsRes = await axios.get('http://127.0.0.1:8000/eligibility/questions');
       setEligibilityQuestions(questionsRes.data);
 
-      const myAppsRes = await axios.get(`http://127.0.0.1:8000/appointments/me?user_id=${currentUser.id}`);
+      // Programările mele preluate securizat pe baza token-ului JWT (fără user_id în URL)
+      const myAppsRes = await axios.get('http://127.0.0.1:8000/appointments/me');
       setMyAppointments(myAppsRes.data);
 
       if (currentUser.role === 'admin' || currentUser.role === 'ADMIN') {
@@ -127,7 +134,7 @@ function Dashboard({ onLogout }) {
             setTimeout(() => setSuccessNotification(''), 4000);
           }
         })
-        .catch(err => {
+        .catch(() => {
           setApiError('Nu s-a putut verifica disponibilitatea locului.');
         });
 
@@ -190,7 +197,7 @@ function Dashboard({ onLogout }) {
       setSuccessNotification(res.data.message);
       fetchData();
       setTimeout(() => setSuccessNotification(''), 3000);
-    } catch (err) {
+    } catch {
       setApiError('Eroare la schimbarea statusului campaniei.');
     }
   };
@@ -209,7 +216,7 @@ function Dashboard({ onLogout }) {
       const questionsRes = await axios.get('http://127.0.0.1:8000/eligibility/questions');
       setEligibilityQuestions(questionsRes.data);
       setTimeout(() => setSuccessNotification(''), 3000);
-    } catch (err) {
+    } catch {
       setApiError('Eroare la adăugarea întrebării.');
     }
   };
@@ -223,7 +230,7 @@ function Dashboard({ onLogout }) {
       const questionsRes = await axios.get('http://127.0.0.1:8000/eligibility/questions');
       setEligibilityQuestions(questionsRes.data);
       setTimeout(() => setSuccessNotification(''), 3000);
-    } catch (err) {
+    } catch {
       setApiError('Eroare la ștergerea întrebării.');
     }
   };
@@ -297,7 +304,7 @@ function Dashboard({ onLogout }) {
       setAppointmentToCancel(null);
       fetchData();
       setTimeout(() => setSuccessNotification(''), 3000);
-    } catch (err) {
+    } catch {
       setApiError('Nu s-a putut anula programarea.');
       setAppointmentToCancel(null);
     }
@@ -309,7 +316,7 @@ function Dashboard({ onLogout }) {
       setSuccessNotification('Donatorul a fost marcat ca Prezent.');
       fetchData();
       setTimeout(() => setSuccessNotification(''), 3000);
-    } catch (err) {
+    } catch {
       setApiError('Eroare la actualizarea statusului.');
     }
   };
@@ -320,7 +327,7 @@ function Dashboard({ onLogout }) {
       setSuccessNotification('Donatorul a fost marcat ca Absent.');
       fetchData();
       setTimeout(() => setSuccessNotification(''), 3000);
-    } catch (err) {
+    } catch {
       setApiError('Eroare la actualizarea statusului.');
     }
   };
@@ -351,7 +358,8 @@ function Dashboard({ onLogout }) {
     setReminderConfirmModal({ isOpen: false, campaign: null });
 
     try {
-      const response = await axios.post(`http://127.0.0.1:8000/reminders/campaign/${camp.id}?current_user_id=${currentUser.id}`);
+      // Reminderele nu mai trimit user_id manual în URL, backend-ul validează prin tokenul admin
+      const response = await axios.post(`http://127.0.0.1:8000/reminders/campaign/${camp.id}`);
       setReminderResultModal({
         isOpen: true,
         isSuccess: true,
@@ -361,7 +369,7 @@ function Dashboard({ onLogout }) {
       setReminderResultModal({
         isOpen: true,
         isSuccess: false,
-        message: err.response?.data?.detail || 'Nu există programări active (confirmate) sau a apărut o eroare.'
+        message: err.response?.data?.detail || 'Eroare la trimiterea reminderelor.'
       });
     }
   };

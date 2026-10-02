@@ -6,11 +6,18 @@ from pydantic import BaseModel
 
 from database import get_db
 from schemas.schemas import QuestionOut, AppointmentWithAnswersCreate, AppointmentOut
+from routers.auth import get_current_user, require_admin
+from models import User
 
 router = APIRouter(
     prefix="/eligibility",
     tags=["Eligibility Questionnaire"]
 )
+
+# Schema Pydantic locală pentru crearea unei întrebări noi
+class QuestionCreatePayload(BaseModel):
+    question_text: str
+    type: str
 
 # 1. GET: Trimite întrebările către frontend active ordonate după ID
 @router.get("/questions", response_model=List[QuestionOut])
@@ -29,9 +36,10 @@ def get_questions(db: Session = Depends(get_db)):
 @router.post("/submit", response_model=AppointmentOut, status_code=status.HTTP_201_CREATED)
 def submit_appointment_with_answers(
     payload: AppointmentWithAnswersCreate, 
+    current_user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
-    current_user_id = payload.appointment.user_id
+    current_user_id = current_user.id
     
     # --- ETAPA A: Verificăm capacitatea slotului ---
     campaign_query = text("SELECT capacity_per_slot, is_active FROM campaigns WHERE id = :camp_id")
@@ -58,7 +66,6 @@ def submit_appointment_with_answers(
 
     # --- ETAPA B & C: Inserare tranzacțională (cu Rollback) ---
     try:
-        # Inserăm programarea cu detaliile extinse
         insert_app_query = text("""
             INSERT INTO appointments (
                 campaign_id, user_id, slot_time, appointment_date, status, created_at,
@@ -86,7 +93,6 @@ def submit_appointment_with_answers(
         row = app_result.mappings().first()
         appointment_id = row["id"]
 
-        # Inserăm răspunsurile dinamice în eligibility_answers
         insert_answer_query = text("""
             INSERT INTO eligibility_answers (appointment_id, question_id, answer_text)
             VALUES (:app_id, :quest_id, :ans_text)
@@ -99,7 +105,6 @@ def submit_appointment_with_answers(
                 "ans_text": answer.answer_text
             })
         
-        # Confirmăm tranzacția doar dacă ambele operațiuni au reușit
         db.commit()
         
         return {
@@ -112,7 +117,6 @@ def submit_appointment_with_answers(
         }
 
     except Exception as e:
-        # În caz de eroare la inserarea răspunsurilor sau a programării, anulăm totul!
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -120,13 +124,12 @@ def submit_appointment_with_answers(
         )
 
 
-# Schema Pydantic locală pentru crearea unei întrebări noi
-class QuestionCreatePayload(BaseModel):
-    question_text: str
-    type: str
-
 @router.post("/questions", status_code=status.HTTP_201_CREATED)
-def create_question(payload: QuestionCreatePayload, db: Session = Depends(get_db)):
+def create_question(
+    payload: QuestionCreatePayload, 
+    admin_user: User = Depends(require_admin), 
+    db: Session = Depends(get_db)
+):
     query = text("""
         INSERT INTO eligibility_questions (question_text, type, is_required, is_active)
         VALUES (:text, :type, 1, 1)
@@ -136,7 +139,11 @@ def create_question(payload: QuestionCreatePayload, db: Session = Depends(get_db
     return {"message": "Întrebarea a fost adăugată cu succes!"}
 
 @router.delete("/questions/{question_id}", status_code=status.HTTP_200_OK)
-def delete_question(question_id: int, db: Session = Depends(get_db)):
+def delete_question(
+    question_id: int, 
+    admin_user: User = Depends(require_admin), 
+    db: Session = Depends(get_db)
+):
     query = text("""
         DELETE FROM eligibility_questions 
         WHERE id = :q_id

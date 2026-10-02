@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 
 from database import get_db, SessionLocal
 from schemas.schemas import AppointmentCreate, AppointmentOut
+from routers.auth import get_current_user, require_admin
+from models import User
 
 router = APIRouter(
     prefix="/appointments",
@@ -19,15 +21,11 @@ router = APIRouter(
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-# ------------------------------------------------------------------------
-# UTILITAR EMAIL NOTIFICARE WAITLIST
-# ------------------------------------------------------------------------
 def send_waitlist_notification_email(to_email: str, donor_name: str, campaign_title: str, slot_time: str, waitlist_id: int, time_limit_hours: int):
     email_user = os.getenv("EMAIL_USER")
     email_password = os.getenv("EMAIL_PASSWORD")
     
     if not email_user or not email_password:
-        print("[CRITICAL] Datele de logare pentru Gmail lipsesc din .env!")
         return
         
     slot_time_formatted = str(slot_time)[:5]
@@ -58,10 +56,6 @@ def send_waitlist_notification_email(to_email: str, donor_name: str, campaign_ti
                             👉 Intră în Aplicație pentru Confirmare
                         </a>
                     </div>
-                    
-                    <p style="font-size: 12px; color: #777; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-                        Dacă nu răspunzi în {time_limit_hours} ore sau refuzi oferta, locul va fi redirecționat automat către următoarea persoană din lista de așteptare.
-                    </p>
                 </div>
             </div>
         </body>
@@ -75,22 +69,18 @@ def send_waitlist_notification_email(to_email: str, donor_name: str, campaign_ti
         server.login(email_user, email_password)
         server.sendmail(email_user, to_email, message.as_string())
         server.quit()
-        print(f"[Waitlist Email Success] Notificare trimisă către {to_email}")
     except Exception as e:
-        print(f"[Waitlist Email Error] Eroare la trimiterea mail-ului: {e}")
+        print(f"[Waitlist Email Error] {e}")
 
 def notify_next_in_waitlist(campaign_id: int, slot_time: str, background_tasks: Optional[BackgroundTasks], db: Session):
-    # Căutăm data campaniei
     camp_query = text("SELECT date FROM campaigns WHERE id = :camp_id")
     camp = db.execute(camp_query, {"camp_id": campaign_id}).fetchone()
     if not camp:
         return
 
-    # Determinăm timpul de răspuns: 12 ore dacă mai e <= 7 zile până la donare, altfel 24 ore
     days_left = (camp.date - datetime.now().date()).days
     time_limit_hours = 12 if days_left <= 7 else 24
 
-    # Căutăm URMĂTORUL donator cu status 'waiting'
     waitlist_query = text("""
         SELECT TOP 1 w.id, w.email, w.name, w.surname, c.title AS campaign_title
         FROM waitlist w
@@ -135,9 +125,6 @@ def notify_next_in_waitlist(campaign_id: int, slot_time: str, background_tasks: 
                 time_limit_hours=time_limit_hours
             )
 
-# ------------------------------------------------------------------------
-# TASK DE SCHEDULER: VERIFICAREA SI EXPIRAREA OFERTELOR WAITLIST
-# ------------------------------------------------------------------------
 def check_expired_waitlist_offers():
     db = SessionLocal()
     try:
@@ -148,26 +135,19 @@ def check_expired_waitlist_offers():
             WHERE w.status = 'notified'
         """)
         notified_entries = db.execute(query).fetchall()
-
         now = datetime.now()
 
         for entry in notified_entries:
             if not entry.notified_at:
                 continue
-
             days_left = (entry.campaign_date - now.date()).days
             allowed_hours = 12 if days_left <= 7 else 24
             expiration_time = entry.notified_at + timedelta(hours=allowed_hours)
 
             if now > expiration_time:
-                # Marcăm ca expirat
                 db.execute(text("UPDATE waitlist SET status = 'expired' WHERE id = :w_id"), {"w_id": entry.id})
                 db.commit()
-                print(f"[Waitlist Scheduler] Oferta {entry.id} a expirat după {allowed_hours}h. Se notifică următorul.")
-                
-                # Trimitere către următoarea persoană
                 notify_next_in_waitlist(entry.campaign_id, str(entry.offered_slot_time), None, db)
-
     except Exception as e:
         print(f"[Waitlist Scheduler Error] {e}")
     finally:
@@ -175,8 +155,12 @@ def check_expired_waitlist_offers():
 
 
 @router.post("/", response_model=AppointmentOut, status_code=status.HTTP_201_CREATED)
-def create_appointment(appointment_data: AppointmentCreate, db: Session = Depends(get_db)):
-    current_user_id = appointment_data.user_id
+def create_appointment(
+    appointment_data: AppointmentCreate, 
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    current_user_id = current_user.id # Preluat în siguranță din JWT
 
     if appointment_data.is_for_someone_else:
         if not appointment_data.guest_phone:
@@ -334,7 +318,6 @@ def create_appointment(appointment_data: AppointmentCreate, db: Session = Depend
         "created_at": row["created_at"]
     }
 
-
 @router.put("/{id}/cancel", status_code=status.HTTP_200_OK)
 def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     app_query = text("SELECT campaign_id, slot_time FROM appointments WHERE id = :app_id")
@@ -376,7 +359,10 @@ def decline_waitlist_offer(wait_id: int, background_tasks: BackgroundTasks, db: 
     return {"message": "Ai refuzat oferta. Locul a fost pasat către următorul donator din lista de așteptare."}
 
 @router.get("/me", response_model=List[AppointmentOut])
-def get_my_appointments(user_id: int, db: Session = Depends(get_db)):
+def get_my_appointments(
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
     query = text("""
         SELECT 
             a.id, 
@@ -394,11 +380,14 @@ def get_my_appointments(user_id: int, db: Session = Depends(get_db)):
           AND a.is_for_someone_else = 0
         ORDER BY a.appointment_date DESC, a.slot_time DESC
     """)
-    result = db.execute(query, {"user_id": user_id}).mappings().all()
+    result = db.execute(query, {"user_id": current_user.id}).mappings().all()
     return result
 
 @router.get("/all", status_code=status.HTTP_200_OK)
-def get_all_appointments_for_admin(db: Session = Depends(get_db)):
+def get_all_appointments_for_admin(
+    admin_user: User = Depends(require_admin), 
+    db: Session = Depends(get_db)
+):
     query = text("""
         SELECT 
             a.id AS appointment_id,
@@ -432,7 +421,12 @@ class NoteUpdatePayload(BaseModel):
     notes: Optional[str] = None
 
 @router.put("/{id}/notes", status_code=status.HTTP_200_OK)
-def update_appointment_notes(id: int, payload: NoteUpdatePayload, db: Session = Depends(get_db)):
+def update_appointment_notes(
+    id: int, 
+    payload: NoteUpdatePayload, 
+    admin_user: User = Depends(require_admin), 
+    db: Session = Depends(get_db)
+):
     query = text("UPDATE appointments SET notes = :notes WHERE id = :app_id")
     result = db.execute(query, {"notes": payload.notes, "app_id": id})
     db.commit()
@@ -443,7 +437,11 @@ def update_appointment_notes(id: int, payload: NoteUpdatePayload, db: Session = 
     return {"message": "Observația a fost salvată cu succes."}
 
 @router.put("/{id}/attend", status_code=status.HTTP_200_OK)
-def attend_appointment(id: int, db: Session = Depends(get_db)):
+def attend_appointment(
+    id: int, 
+    admin_user: User = Depends(require_admin), 
+    db: Session = Depends(get_db)
+):
     query = text("UPDATE appointments SET status = 'attended' WHERE id = :app_id")
     result = db.execute(query, {"app_id": id})
     db.commit()
@@ -454,7 +452,11 @@ def attend_appointment(id: int, db: Session = Depends(get_db)):
     return {"message": "Donatorul a fost marcat ca prezent."}
 
 @router.put("/{id}/noshow", status_code=status.HTTP_200_OK)
-def noshow_appointment(id: int, db: Session = Depends(get_db)):
+def noshow_appointment(
+    id: int, 
+    admin_user: User = Depends(require_admin), 
+    db: Session = Depends(get_db)
+):
     query = text("UPDATE appointments SET status = 'no_show' WHERE id = :app_id")
     result = db.execute(query, {"app_id": id})
     db.commit()
@@ -488,7 +490,11 @@ def get_top_donors(db: Session = Depends(get_db)):
     return result
 
 @router.get("/donor-history", status_code=status.HTTP_200_OK)
-def get_donor_history(phone: str, db: Session = Depends(get_db)):
+def get_donor_history(
+    phone: str, 
+    admin_user: User = Depends(require_admin), 
+    db: Session = Depends(get_db)
+):
     query = text("""
         SELECT 
             a.id AS appointment_id,

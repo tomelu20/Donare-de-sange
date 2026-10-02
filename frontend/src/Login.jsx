@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-// Vite uses import.meta.env; fallback safely to backend default
 const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://127.0.0.1:8000';
 
 function Login({ onSwitch, onLoginSuccess }) {
@@ -25,7 +24,6 @@ function Login({ onSwitch, onLoginSuccess }) {
         { withCredentials: true }
       );
       
-      // Store session payload for frontend UI components
       sessionStorage.setItem('user_session', JSON.stringify(response.data.user));
       
       if (response.data.access_token) {
