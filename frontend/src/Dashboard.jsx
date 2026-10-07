@@ -72,7 +72,6 @@ function Dashboard({ onLogout }) {
       setLoading(true);
       setApiError('');
 
-      // Setează token-ul JWT global în Axios dacă există în sessionStorage
       const token = sessionStorage.getItem('access_token');
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -84,7 +83,6 @@ function Dashboard({ onLogout }) {
       const questionsRes = await axios.get('http://127.0.0.1:8000/eligibility/questions');
       setEligibilityQuestions(questionsRes.data);
 
-      // Programările mele preluate securizat pe baza token-ului JWT (fără user_id în URL)
       const myAppsRes = await axios.get('http://127.0.0.1:8000/appointments/me');
       setMyAppointments(myAppsRes.data);
 
@@ -108,14 +106,12 @@ function Dashboard({ onLogout }) {
   useEffect(() => {
     fetchData();
 
-    // INTERCEPTARE REDIRECȚIONARE DIN EMAIL
     const params = new URLSearchParams(window.location.search);
     const isWaitlistOffer = params.get('waitlist_offer');
     const waitId = params.get('wait_id');
     const slot = params.get('slot');
 
     if (isWaitlistOffer === 'true' && waitId && slot) {
-      // Verificăm dacă locul mai este disponibil înainte de afișarea pop-up-ului de Accept/Refuz
       axios.get(`http://127.0.0.1:8000/waitlist/${waitId}/check-offer?slot_time=${slot}:00`)
         .then(res => {
           if (res.data.available && !res.data.already_accepted) {
@@ -239,23 +235,7 @@ function Dashboard({ onLogout }) {
     e.preventDefault();
     setApiError('');
 
-    const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
-    if (!dateRegex.test(newCampDate)) {
-      setApiError('Data de început trebuie să fie în formatul ZZ-LL-AAAA (ex: 10-10-2026).');
-      return;
-    }
-    if (!dateRegex.test(newCampEndDate)) {
-      setApiError('Data de sfârșit trebuie să fie în formatul ZZ-LL-AAAA (ex: 12-10-2026).');
-      return;
-    }
-
-    const [startDay, startMonth, startYear] = newCampDate.split('-');
-    const formattedStartDate = `${startYear}-${startMonth}-${startDay}`;
-
-    const [endDay, endMonth, endYear] = newCampEndDate.split('-');
-    const formattedEndDate = `${endYear}-${endMonth}-${endDay}`;
-
-    if (new Date(formattedStartDate) > new Date(formattedEndDate)) {
+    if (new Date(newCampDate) > new Date(newCampEndDate)) {
       setApiError('Data de început nu poate fi mai mare decât data de sfârșit.');
       return;
     }
@@ -265,8 +245,8 @@ function Dashboard({ onLogout }) {
         title: newCampTitle,
         location_name: newCampLocation,
         address: newCampAddress,
-        date: formattedStartDate,
-        end_date: formattedEndDate,
+        date: newCampDate,
+        end_date: newCampEndDate,
         start_time: `${newCampStartTime}:00`,
         end_time: `${newCampEndTime}:00`,
         slot_duration: parseInt(newCampSlotDuration),
@@ -343,7 +323,11 @@ function Dashboard({ onLogout }) {
     if (!dateString) return '';
     const parts = dateString.split('-');
     if (parts.length !== 3) return dateString;
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    // Dacă vine în format YYYY-MM-DD -> îl transformăm în DD-MM-YYYY
+    if (parts[0].length === 4) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateString;
   };
 
   const formatTimeShort = (timeString) => {
@@ -358,7 +342,6 @@ function Dashboard({ onLogout }) {
     setReminderConfirmModal({ isOpen: false, campaign: null });
 
     try {
-      // Reminderele nu mai trimit user_id manual în URL, backend-ul validează prin tokenul admin
       const response = await axios.post(`http://127.0.0.1:8000/reminders/campaign/${camp.id}`);
       setReminderResultModal({
         isOpen: true,
@@ -1084,7 +1067,7 @@ function Dashboard({ onLogout }) {
       {waitlistCampaign && (
         <WaitlistModal 
           campaign={waitlistCampaign} 
-          onClose={() => setWaitlistCampaign(null)} 
+          onClose={() => setWaitlistCalendar(null)} 
           onRefresh={fetchData} 
         />
       )}
