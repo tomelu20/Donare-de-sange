@@ -144,14 +144,25 @@ def delete_question(
     admin_user: User = Depends(require_admin), 
     db: Session = Depends(get_db)
 ):
-    query = text("""
-        DELETE FROM eligibility_questions 
-        WHERE id = :q_id
-    """)
-    result = db.execute(query, {"q_id": question_id})
-    db.commit()
-    
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Întrebarea nu a fost găsită.")
+    try:
+        # 1. Șterge mai întâi răspunsurile asociate întrebării
+        delete_answers_query = text("DELETE FROM eligibility_answers WHERE question_id = :q_id")
+        db.execute(delete_answers_query, {"q_id": question_id})
         
-    return {"message": "Întrebarea a fost ștearsă cu succes!"}
+        # 2. Șterge întrebarea
+        delete_question_query = text("DELETE FROM eligibility_questions WHERE id = :q_id")
+        result = db.execute(delete_question_query, {"q_id": question_id})
+        
+        db.commit()
+        
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Întrebarea nu a fost găsită.")
+            
+        return {"message": "Întrebarea și răspunsurile asociate au fost șterse cu succes!"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Eroare la ștergerea întrebării: {str(e)}"
+        )

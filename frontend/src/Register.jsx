@@ -10,7 +10,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [bloodGroup, setBloodGroup] = useState('');
   const [emailCode, setEmailCode] = useState(''); 
   
   const [isCodeSent, setIsCodeSent] = useState(false);
@@ -105,11 +104,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
       return;
     }
 
-    if (!bloodGroup) {
-      setError('Vă rugăm să selectați o opțiune pentru grupa sanguină.');
-      return;
-    }
-
     if (!isVerified) {
       setError('Trebuie să vă verificați adresa de email înainte de a crea contul.');
       return;
@@ -125,7 +119,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
           phone: phone.trim(),
           email: email.trim(),
           password: password,
-          blood_group: bloodGroup,
           email_code: emailCode.trim()
         },
         { withCredentials: true }
@@ -139,7 +132,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
       setPhone('');
       setEmail('');
       setPassword('');
-      setBloodGroup('');
       setEmailCode('');
       setIsCodeSent(false);
       setIsVerified(false);
@@ -293,31 +285,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
           </div>
         )}
         
-        {/* 5. GRUPA SANGUINĂ */}
-        <div style={{ marginBottom: '14px' }}>
-          <label htmlFor="reg-blood-group" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Grupa sanguină / RH:</label>
-          <select 
-            id="reg-blood-group"
-            value={bloodGroup} 
-            onChange={(e) => setBloodGroup(e.target.value)}
-            required
-            disabled={isLoading}
-            style={{ width: '100%', padding: '9px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: 'white', boxSizing: 'border-box', cursor: 'pointer' }}
-          >
-            <option value="" disabled hidden>Alege grupa sanguină</option>
-            <option value="Nu știu">Nu știu grupa mea sanguină</option>
-            <option value="0I+">0I (Pozitiv)</option>
-            <option value="0I-">0I (Negativ)</option>
-            <option value="AII+">AII (Pozitiv)</option>
-            <option value="AII-">AII (Negativ)</option>
-            <option value="BIII+">BIII (Pozitiv)</option>
-            <option value="BIII-">BIII (Negativ)</option>
-            <option value="ABIV+">ABIV (Pozitiv)</option>
-            <option value="ABIV-">ABIV (Negativ)</option>
-          </select>
-        </div>
-        
-        {/* 6. PAROLĂ CU GHID VIZUAL */}
+        {/* 5. PAROLĂ CU GHID VIZUAL */}
         <div style={{ marginBottom: '20px' }}>
           <label htmlFor="reg-password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Parolă:</label>
           <input 
