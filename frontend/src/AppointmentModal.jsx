@@ -138,7 +138,6 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
         await axios.post(`http://127.0.0.1:8000/waitlist/${waitlistId}/assign?slot_time=${selectedSlot.time}`);
         setSuccess('Donatorul din lista de așteptare a fost asignat cu succes!');
       } else {
-        // user_id a fost scos din payload, backend-ul preia utilizatorul direct din token-ul JWT securizat
         await axios.post('http://127.0.0.1:8000/eligibility/submit', {
           appointment: {
             campaign_id: campaign.id,
@@ -150,7 +149,6 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
             guest_phone: isForSomeoneElse ? guestPhone : null,
             guest_email: isForSomeoneElse ? guestEmail : null,
             guest_blood_group: isForSomeoneElse ? guestBloodGroup : "Nu știu"
-            // Niciun user_id aici!
           },
           answers: Object.keys(checklist).map(qId => ({
             question_id: parseInt(qId, 10),
@@ -197,6 +195,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                 Locație: <strong>{campaign.location_name}</strong> ({campaign.address})
               </p>
 
+              {/* ATENȚIONAREA DE ELIGIBILITATE MUTATĂ MAI SUS */}
               {!isAssigningFromWaitlist && (
                 <div style={{ 
                   backgroundColor: isEligible ? '#e2f0d9' : '#fff3cd', 
@@ -352,7 +351,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                   gap: '5px'
                 }}
               >
-                {isEligible ? '✓ Eligibilitate Validată' : '📋 Formular Eligibilitate'}
+                {isEligible ? '✓ Eligibilitate Validată' : '📋 Verifica daca poti dona'}
               </button>
             )}
             
@@ -393,7 +392,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
             {/* HEADER FIX CHESTIONAR */}
             <div style={{ padding: '25px 25px 15px 25px', borderBottom: '1px solid #eee' }}>
               <h3 style={{ margin: '0 0 5px 0', color: '#2b2d42', borderBottom: '2px solid #e63946', paddingBottom: '8px' }}>
-                📋 Formular Chestionar Eligibilitate
+                📋 Asigura-te ca poti dona
               </h3>
               <p style={{ fontSize: '13px', color: '#666', margin: '10px 0 0 0' }}>
                 Pentru a finaliza programarea, trebuie să răspundeți corect sau să bifați condițiile obligatorii de mai jos:
@@ -454,7 +453,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                         </>
                       )}
 
-                      {/* 3. Tip Răspuns: CHECKBOX inline (Căsuța și textul pe aceeași linie) */}
+                      {/* 3. Tip Răspuns: CHECKBOX inline */}
                       {(q.type === 'checkbox' || !q.type) && (
                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '500', color: '#333', cursor: 'pointer', width: '100%' }}>
                           <input 
