@@ -195,28 +195,9 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                 Locație: <strong>{campaign.location_name}</strong> ({campaign.address})
               </p>
 
-              {/* ATENȚIONAREA DE ELIGIBILITATE MUTATĂ MAI SUS */}
-              {!isAssigningFromWaitlist && (
-                <div style={{ 
-                  backgroundColor: isEligible ? '#e2f0d9' : '#fff3cd', 
-                  color: isEligible ? '#385723' : '#856404', 
-                  padding: '10px 15px', 
-                  borderRadius: '6px', 
-                  fontSize: '13px', 
-                  fontWeight: 'bold',
-                  marginBottom: '15px',
-                  border: isEligible ? '1px solid #c5e0b4' : '1px solid #ffeeba'
-                }}>
-                  {isEligible 
-                    ? '✓ Chestionar completat corect! Te poți programa sau înscrie în waitlist.' 
-                    : '⚠ Pentru a te putea programa sau înscrie în waitlist, trebuie să completezi Formularul de Eligibilitate.'
-                  }
-                </div>
-              )}
-
               {/* OPȚIUNE PROGRAMEAZĂ PE ALTCINEVA */}
               {!isAssigningFromWaitlist && (
-                <div style={{ backgroundColor: '#fdf0f1', padding: '12px', borderRadius: '6px', marginBottom: '20px', border: '1px solid #f9dadc' }}>
+                <div style={{ backgroundColor: '#fdf0f1', padding: '12px', borderRadius: '6px', marginBottom: '15px', border: '1px solid #f9dadc' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#e63946', fontSize: '14px' }}>
                     <input 
                       type="checkbox" 
@@ -261,6 +242,25 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* ATENȚIONAREA DE ELIGIBILITATE */}
+              {!isAssigningFromWaitlist && (
+                <div style={{ 
+                  backgroundColor: isEligible ? '#e2f0d9' : '#fff3cd', 
+                  color: isEligible ? '#385723' : '#856404', 
+                  padding: '10px 15px', 
+                  borderRadius: '6px', 
+                  fontSize: '13px', 
+                  fontWeight: 'bold',
+                  marginBottom: '20px',
+                  border: isEligible ? '1px solid #c5e0b4' : '1px solid #ffeeba'
+                }}>
+                  {isEligible 
+                    ? '✓ Chestionar completat corect! Te poți programa sau înscrie în waitlist.' 
+                    : '⚠ Pentru a te putea programa sau înscrie în waitlist, trebuie să completezi Formularul de Eligibilitate.'
+                  }
                 </div>
               )}
               
@@ -394,8 +394,8 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
               <h3 style={{ margin: '0 0 5px 0', color: '#2b2d42', borderBottom: '2px solid #e63946', paddingBottom: '8px' }}>
                 📋 Asigura-te ca poti dona
               </h3>
-              <p style={{ fontSize: '13px', color: '#666', margin: '10px 0 0 0' }}>
-                Pentru a finaliza programarea, trebuie să răspundeți corect sau să bifați condițiile obligatorii de mai jos:
+              <p style={{ fontSize: '13px', color: '#666', margin: '10px 0 0 0', lineHeight: '1.4' }}>
+                Bifează criteriile de mai jos pentru a valida eligibilitatea ta în mod anonim. Răspunsurile nu sunt salvate în contul tău, dar ne ajută să ne asigurăm că fiecare loc din campanie este folosit de un donator care îndeplinește condițiile medicale.
               </p>
             </div>
 
@@ -487,7 +487,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                   fontSize: '13px'
                 }}
               >
-                {isEligible ? 'Salvează & Continuă' : 'Închide (Neelegibil)'}
+                {isEligible ? 'Validează & Continuă' : 'Închide (Neelegibil)'}
               </button>
             </div>
 
