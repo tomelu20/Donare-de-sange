@@ -5,7 +5,45 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
   const savedUser = sessionStorage.getItem('user_session');
   const user = savedUser ? JSON.parse(savedUser) : null;
 
-  const [preferredTime, setPreferredTime] = useState('');
+  // Generăm toate zilele campaniei
+  const campaignDays = [];
+  if (campaign) {
+    let startDateStr = campaign.date || campaign.start_date;
+    let endDateStr = campaign.end_date || campaign.date;
+
+    if (startDateStr) {
+      let curr = new Date(startDateStr);
+      let end = endDateStr ? new Date(endDateStr) : new Date(startDateStr);
+      
+      while (curr <= end) {
+        campaignDays.push(curr.toISOString().split('T')[0]);
+        curr.setDate(curr.getDate() + 1);
+      }
+    }
+  }
+
+  if (campaignDays.length === 0 && campaign?.date) {
+    campaignDays.push(campaign.date);
+  }
+
+  // Funcție de formatare a datei în zi.luna.an
+  const formatDateRO = (dateString) => {
+    if (!dateString) return '';
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}.${parts[1]}.${parts[0]}`;
+    }
+    return dateString;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(campaignDays[0] || '');
+  
+  // Determinăm ora maximă de sfârșit a campaniei (fallback la 13:00)
+  const campaignEndTime = campaign?.end_time || campaign?.closing_time || '13:00';
+  
+  const [startTime, setStartTime] = useState('08:30');
+  const [endTime, setEndTime] = useState(campaignEndTime);
+
   const [travelTime, setTravelTime] = useState('30');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -13,21 +51,80 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
 
   if (!campaign || !user) return null;
 
+  // Generăm lista completă de ore (până la ora de sfârșit a campaniei)
+  const generateHourOptions = (maxTimeStr) => {
+    let options = [];
+    let [maxH, maxM] = maxTimeStr ? maxTimeStr.split(':').map(Number) : [13, 0];
+
+    for (let hour = 8; hour <= maxH; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        if (hour === maxH && minute > maxM) break;
+        let formattedHour = hour.toString().padStart(2, '0');
+        let formattedMinute = minute.toString().padStart(2, '0');
+        let timeStr = `${formattedHour}:${formattedMinute}`;
+        options.push(timeStr);
+      }
+    }
+    return options;
+  };
+
+  const allHourOptions = generateHourOptions(campaignEndTime);
+
+  // Ora minimă trebuie să fie cu cel puțin 15 minute înainte de ora maximă selectată
+  const getStartTimeOptions = () => {
+    return allHourOptions.filter(time => {
+      const [h1, m1] = time.split(':').map(Number);
+      const [h2, m2] = endTime.split(':').map(Number);
+      const totalMinutes1 = h1 * 60 + m1;
+      const totalMinutes2 = h2 * 60 + m2;
+      return totalMinutes1 <= totalMinutes2 - 15;
+    });
+  };
+
+  // Ora maximă trebuie să fie cu cel puțin 15 minute după ora minimă selectată
+  const getEndTimeOptions = () => {
+    return allHourOptions.filter(time => {
+      const [h1, m1] = startTime.split(':').map(Number);
+      const [h2, m2] = time.split(':').map(Number);
+      const totalMinutes1 = h1 * 60 + m1;
+      const totalMinutes2 = h2 * 60 + m2;
+      return totalMinutes2 >= totalMinutes1 + 15;
+    });
+  };
+
+  const startTimeOptions = getStartTimeOptions();
+  const endTimeOptions = getEndTimeOptions();
+
+  // Gestionare schimbare ora maximă cu validare automată a orei minime
+  const handleEndTimeChange = (newEndTime) => {
+    setEndTime(newEndTime);
+    const [h1, m1] = startTime.split(':').map(Number);
+    const [h2, m2] = newEndTime.split(':').map(Number);
+    if ((h1 * 60 + m1) >= (h2 * 60 + m2) - 15) {
+      // Ajustăm automat ora minimă cu un slot (15 min) înainte
+      let totalMin = (h2 * 60 + m2) - 15;
+      let newH = Math.floor(totalMin / 60).toString().padStart(2, '0');
+      let newM = (totalMin % 60).toString().padStart(2, '0');
+      setStartTime(`${newH}:${newM}`);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess('');
 
+    let combinedTime = `Data: ${formatDateRO(selectedDate)} | Interval: de la ${startTime} până la ${endTime}`;
+
     try {
-      // user_id a fost scos din payload, fiind extras în siguranță pe backend din token-ul JWT
       await axios.post('http://127.0.0.1:8000/waitlist/', {
         campaign_id: campaign.id,
         name: user.name,
         surname: user.surname,
         phone: user.phone,
         email: user.email,
-        preferred_time_range: preferredTime,
+        preferred_time_range: combinedTime,
         travel_time_minutes: parseInt(travelTime)
       });
 
@@ -45,7 +142,7 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100 }}>
-      <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', maxWidth: '450px', width: '90%', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', fontFamily: 'sans-serif' }}>
+      <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', maxWidth: '480px', width: '90%', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', fontFamily: 'sans-serif' }}>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
           <h3 style={{ margin: 0, color: '#e63946' }}>Înscriere Waitlist</h3>
@@ -58,19 +155,56 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
         {!success && (
           <form onSubmit={handleSubmit}>
             <p style={{ margin: '0 0 15px 0', fontSize: '14px', color: '#555', lineHeight: '1.4' }}>
-              Dacă nu găsești un interval disponibil sau potrivit pentru campania de la <strong>{campaign.location_name}</strong>, completează opțiunile de mai jos și te vom contacta dacă un loc se eliberează.
+              Dacă nu găsești un interval disponibil pentru campania de la <strong>{campaign.location_name}</strong>, alege ziua și perioada orară în care poți veni.
             </p>
 
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 'bold' }}>Ziua si intervalul orar preferat:</label>
-              <input 
-                type="text" 
-                value={preferredTime} 
-                onChange={(e) => setPreferredTime(e.target.value)} 
+            {/* SELECȚIE DATĂ ÎN FORMAT ZI.LUNĂ.AN */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 'bold' }}>Alege ziua campaniei:</label>
+              <select 
+                value={selectedDate} 
+                onChange={(e) => setSelectedDate(e.target.value)} 
                 required 
-                placeholder="Ex: 22 Aprilie 09 - 11 sau Oricând" 
-                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-              />
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', backgroundColor: '#fff' }}
+              >
+                {campaignDays.map((day, index) => (
+                  <option key={index} value={day}>
+                    Ziua {index + 1}: {formatDateRO(day)}
+                  </option>
+                ))}
+              </select>
+              <small style={{ color: '#666', fontSize: '11px', marginTop: '2px', display: 'block' }}>
+                Poți selecta oricare dintre zilele în care se desfășoară campania.
+              </small>
+            </div>
+
+            {/* CADRANELE DE ORE VALIDATE RECIPROC */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 'bold' }}>Cel mai devreme de la:</label>
+                <select 
+                  value={startTime} 
+                  onChange={(e) => setStartTime(e.target.value)} 
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', backgroundColor: '#fff' }}
+                >
+                  {startTimeOptions.map((time, idx) => (
+                    <option key={idx} value={time}>{time}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 'bold' }}>Cel târziu până la:</label>
+                <select 
+                  value={endTime} 
+                  onChange={(e) => handleEndTimeChange(e.target.value)} 
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', backgroundColor: '#fff' }}
+                >
+                  {endTimeOptions.map((time, idx) => (
+                    <option key={idx} value={time}>{time}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div style={{ marginBottom: '20px' }}>
