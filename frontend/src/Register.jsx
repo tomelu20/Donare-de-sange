@@ -10,10 +10,12 @@ function Register({ onSwitch, onRegisterSuccess }) {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [emailCode, setEmailCode] = useState(''); 
-  
+  const [emailCode, setEmailCode] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
   const [isCodeSent, setIsCodeSent] = useState(false);
-  const [isVerified, setIsVerified] = useState(false); 
+  const [isVerified, setIsVerified] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +36,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
   // Sanitizare Nume / Prenume (doar litere, spațiu și cratimă)
   const handleNameInput = (value, setter) => {
-    const lettersOnly = value.replace(/[^a-zA-ZăîâșțĂÎÂȘȚ\s\-]/g, '');
+    const lettersOnly = value.replace(/[^a-zA-ZăîâșțĂÎÂȘȚ\s-]/g, '');
     setter(lettersOnly);
   };
 
@@ -95,17 +97,22 @@ function Register({ onSwitch, onRegisterSuccess }) {
     setSuccess('');
 
     if (!isPhoneValid) {
-      setError('Numărul de telefon trebuie să aibă exact 10 cifre și să înceapă cu 07 (ex: 07XXXXXXXX).');
+      setError('Numărul de telefon introdus este incorect sau incomplet. Acesta trebuie să aibă exact 10 cifre și să înceapă cu 07 (ex: 07XXXXXXXX).');
       return;
     }
 
     if (!isPasswordValid) {
-      setError('Parola nu respectă toate cerințele de securitate.');
+      setError('Parola introdusă nu respectă toate cerințele de securitate afișate mai jos.');
       return;
     }
 
     if (!isVerified) {
-      setError('Trebuie să vă verificați adresa de email înainte de a crea contul.');
+      setError('Adresa de email nu a fost verificată. Vă rugăm să trimiteți și să introduceți codul de verificare primit pe email.');
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setError('Trebuie să bifați și să acceptați Politica de Confidențialitate pentru a putea crea un cont.');
       return;
     }
 
@@ -133,6 +140,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
       setEmail('');
       setPassword('');
       setEmailCode('');
+      setAcceptedTerms(false);
       setIsCodeSent(false);
       setIsVerified(false);
 
@@ -151,14 +159,12 @@ function Register({ onSwitch, onRegisterSuccess }) {
     }
   };
 
-  const isSubmitDisabled = !isVerified || !isPhoneValid || !isPasswordValid || isLoading;
-
   return (
     <div style={{ maxWidth: '420px', margin: '40px auto', padding: '24px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'sans-serif', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
       <h2 style={{ textAlign: 'center', color: '#e63946', marginBottom: '20px' }}>Înregistrare Cont Nou</h2>
-      
-      {error && <p style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '14px' }}>{error}</p>}
-      {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px' }}>{success}</p>}
+
+      {/* Mesajul de succes rămâne sus dacă aparține fluxului general */}
+      {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginBottom: '15px' }}>{success}</p>}
 
       <form onSubmit={handleRegister}>
         
@@ -286,7 +292,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
         )}
         
         {/* 5. PAROLĂ CU GHID VIZUAL */}
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <label htmlFor="reg-password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Parolă:</label>
           <input 
             id="reg-password"
@@ -316,18 +322,44 @@ function Register({ onSwitch, onRegisterSuccess }) {
             </div>
           </div>
         </div>
+
+        {/* 6. SECȚIUNEA DE TERMENI ȘI CONDIȚII / POLITICA DE CONFIDENȚIALITATE (BIFĂ OBLIGATORIE) */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <input 
+              type="checkbox"
+              id="terms-checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              disabled={isLoading}
+              style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
+            />
+            <label htmlFor="terms-checkbox" style={{ fontSize: '13px', color: '#333', lineHeight: '1.4', cursor: 'pointer' }}>
+              Am citit și sunt de acord cu{' '}
+              <button 
+                type="button" 
+                onClick={() => setShowTermsModal(true)} 
+                style={{ background: 'none', border: 'none', color: '#e63946', textDecoration: 'underline', padding: 0, font: 'inherit', cursor: 'pointer' }}
+              >
+                Politica de Confidențialitate
+              </button>{' '}
+              și prelucrarea datelor cu caracter personal.*
+            </label>
+          </div>
+        </div>
         
+        {/* BUTON CREARE CONT */}
         <button 
           type="submit" 
-          disabled={isSubmitDisabled} 
+          disabled={isLoading} 
           style={{ 
             width: '100%', 
             padding: '12px', 
-            backgroundColor: isSubmitDisabled ? '#ccc' : '#e63946', 
+            backgroundColor: isLoading ? '#ccc' : '#e63946', 
             color: 'white', 
             border: 'none', 
             borderRadius: '4px', 
-            cursor: isSubmitDisabled ? 'not-allowed' : 'pointer', 
+            cursor: isLoading ? 'not-allowed' : 'pointer', 
             fontSize: '16px', 
             fontWeight: 'bold',
             transition: 'background-color 0.2s ease'
@@ -335,6 +367,13 @@ function Register({ onSwitch, onRegisterSuccess }) {
         >
           {isLoading ? 'Se creează contul...' : 'Creează cont'}
         </button>
+
+        {/* MESAJUL DE EROARE POZIȚIONAT DIRECT SUB BUTONUL DE SUBMIT */}
+        {error && (
+          <div style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginTop: '12px', textAlign: 'center', fontWeight: '500', border: '1px solid #f5c6cb' }}>
+            {error}
+          </div>
+        )}
       </form>
 
       <p style={{ textAlign: 'center', marginTop: '15px', fontSize: '14px' }}>
@@ -343,6 +382,83 @@ function Register({ onSwitch, onRegisterSuccess }) {
           Conectează-te aici
         </button>
       </p>
+
+      {/* MODAL CU TEXTUL INTEGRAL AL POLITICII DE CONFIDENȚIALITATE */}
+      {showTermsModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '550px', width: '100%', maxHeight: '80vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ marginTop: 0, color: '#e63946', textAlign: 'center' }}>Politica de Confidențialitate</h3>
+            <p style={{ fontSize: '12px', color: '#666', textAlign: 'center' }}>Ultima actualizare: Octombrie 2026</p>
+            
+            <div style={{ fontSize: '13px', color: '#444', lineHeight: '1.6', textAlign: 'left' }}>
+              <p>
+                Această Politică de Confidențialitate explică modul în care organizatorii campaniei „Dumbrăvița Salvează Vieți” colectează, folosesc și protejează datele cu caracter personal pe care le introduceți pe această platformă web în scopul programării la acțiunea de donare de sânge.
+              </p>
+              
+              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>1. Cine colectează datele dumneavoastră</h4>
+              <p style={{ margin: '0 0 10px 0' }}>
+                Datele sunt colectate și procesate de către echipa de organizare a campaniei comunitare „Dumbrăvița Salvează Vieți”, desfășurată în parteneriat cu Centrul Regional de Transfuzie Sanguină Timișoara.
+              </p>
+
+              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>2. Ce date colectăm și în ce scop</h4>
+              <p style={{ margin: '0 0 5px 0' }}>
+                Pentru a vă putea asigura un loc și un interval orar la campania de donare din data de de la Sala Polivalentă (str. Codrului), colectăm următoarele date în momentul creării contului:
+              </p>
+              <ul style={{ margin: '0 0 10px 0', paddingLeft: '20px' }}>
+                <li><strong>Nume și prenume:</strong> Pentru identificarea pe listele de programări.</li>
+                <li><strong>Adresă de e-mail:</strong> Pentru trimiterea automată a confirmării rezervării și a detaliilor organizatorice.</li>
+                <li><strong>Număr de telefon:</strong> Pentru a vă putea contacta rapid în caz de modificări urgente în programul recoltărilor.</li>
+              </ul>
+
+              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>3. Datele privind starea de sănătate (Chestionarul de eligibilitate)</h4>
+              <p style={{ margin: '0 0 10px 0' }}>
+                Platforma noastră NU colectează și NU stochează date medicale cu caracter sensibil. Chestionarul de pre-screening pe care îl completați înainte de programare are un rol strict informativ și de autoevaluare. Răspunsurile dumneavoastră sunt procesate exclusiv în browserul dumneavoastră (pe ecran) pentru a valida eligibilitatea generală și a deblocat butonul de programare. În baza noastră de date centrală se salvează doar un indicator tehnic de confirmare („Eligibilitate: Validată”), fără istoricul răspunsurilor la întrebări.
+              </p>
+
+              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>4. Opțiunea „Programez pentru altcineva”</h4>
+              <p style={{ margin: '0 0 10px 0' }}>
+                Dacă utilizați platforma pentru a înscrie un membru al familiei sau un prieten, aveți obligația legală de a obține acordul prealabil al acelei persoane pentru a ne furniza numele și datele sale de contact.
+              </p>
+
+              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>5. Cât timp păstrăm datele dumneavoastră</h4>
+              <p style={{ margin: '0 0 10px 0' }}>
+                Datele de contact (nume, e-mail, telefon) vor fi păstrate securizat doar pe durata organizării și centralizării acestei ediții. Toate conturile și datele colectate pentru evenimentul din noiembrie 2026 vor fi șterse definitiv și ireversibil din serverele noastre în termen de maximum 30 de zile de la finalizarea campaniei.
+              </p>
+
+              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>6. Drepturile dumneavoastră conform GDPR</h4>
+              <p style={{ margin: '0 0 5px 0' }}>În conformitate cu Regulamentul (UE) 2016/679, beneficiați de următoarele drepturi:</p>
+              <ul style={{ margin: '0 0 10px 0', paddingLeft: '20px' }}>
+                <li>Dreptul de a solicita accesul la datele dumneavoastră.</li>
+                <li>Dreptul de a solicita corectarea datelor (de exemplu, modificarea numărului de telefon greșit).</li>
+                <li>Dreptul de a solicita ștergerea contului și a datelor înainte de termen (anularea programării).</li>
+              </ul>
+              <p style={{ margin: '0 0 10px 0' }}>
+                Pentru exercitarea oricăruia dintre aceste drepturi sau pentru întrebări legate de datele dumneavoastră, ne puteți contacta printr-un simplu mesaj la adresa de e-mail a organizatorilor campaniei.
+              </p>
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setAcceptedTerms(true);
+                  setShowTermsModal(false);
+                }} 
+                style={{ backgroundColor: '#2b9348', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Accept și închid
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setShowTermsModal(false)} 
+                style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Închide
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
