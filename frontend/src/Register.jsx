@@ -392,7 +392,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
             
             <div style={{ fontSize: '13px', color: '#444', lineHeight: '1.6', textAlign: 'left' }}>
               <p>
-                Această Politică de Confidențialitate explică modul în care organizatorii campaniei „Dumbrăvița Salvează Vieți” colectează, folosesc și protejează datele cu caracter personal pe care le introduceți pe această platformă web în scopul programării la acțiunea de donare de sânge.
+                Prin utilizarea aplicației noastre pentru campaniile de donare de sânge, sunteți de acord cu colectarea și prelucrarea datelor dumneavoastră conform prezentei Politici de Confidențialitate. Ne angajăm să vă protejăm confidențialitatea și să respectăm legislația în vigoare privind protecția datelor (GDPR - Regulamentul UE 2016/679).
               </p>
               
               <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>1. Cine colectează datele dumneavoastră</h4>
@@ -402,17 +402,19 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
               <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>2. Ce date colectăm și în ce scop</h4>
               <p style={{ margin: '0 0 5px 0' }}>
-                Pentru a vă putea asigura un loc și un interval orar la campania de donare din data de de la Sala Polivalentă (str. Codrului), colectăm următoarele date în momentul creării contului:
+                Colectăm doar datele minime necesare pentru buna desfășurare a campaniilor de donare de sânge organizate in Dumbrăvița și pentru generarea de statistici comunitare.
+                Pentru a vă putea asigura un loc și un interval orar la campaniile de donare de sange organizate de „Dumbrăvița Salveaza Vieți", colectăm următoarele date în momentul creării contului:
               </p>
               <ul style={{ margin: '0 0 10px 0', paddingLeft: '20px' }}>
-                <li><strong>Nume și prenume:</strong> Pentru identificarea pe listele de programări.</li>
-                <li><strong>Adresă de e-mail:</strong> Pentru trimiterea automată a confirmării rezervării și a detaliilor organizatorice.</li>
+                <li><strong>Nume și prenume:</strong> Pentru identificarea dumneavoastră ca participant și gestionarea programărilor/contului.</li>
+                <li><strong>Adresă de e-mail:</strong> Pentru trimiterea automată a confirmării înscrierii, transmiterea detaliilor organizatorice și notificări privind viitoarele campanii de donare din localitate.</li>
                 <li><strong>Număr de telefon:</strong> Pentru a vă putea contacta rapid în caz de modificări urgente în programul recoltărilor.</li>
+                <li><strong>Istoricul donărilor în cadrul aplicației:</strong> Numărul de donări efectuate prin platformă, utilizat pentru istoricul contului dumneavoastră și statistici comunitare.</li>
               </ul>
 
               <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>3. Datele privind starea de sănătate (Chestionarul de eligibilitate)</h4>
               <p style={{ margin: '0 0 10px 0' }}>
-                Platforma noastră NU colectează și NU stochează date medicale cu caracter sensibil. Chestionarul de pre-screening pe care îl completați înainte de programare are un rol strict informativ și de autoevaluare. Răspunsurile dumneavoastră sunt procesate exclusiv în browserul dumneavoastră (pe ecran) pentru a valida eligibilitatea generală și a deblocat butonul de programare. În baza noastră de date centrală se salvează doar un indicator tehnic de confirmare („Eligibilitate: Validată”), fără istoricul răspunsurilor la întrebări.
+                Platforma noastră NU colectează și NU stochează date medicale. Chestionarul de pre-screening pe care îl completați înainte de programare are un rol strict informativ si de autoevaluare a eligibilitatii dumneavoastra prin prisma criteriilor impuse de Centrul Regional de Transfuzie Sanguină Timișoara. Răspunsurile dumneavoastră sunt procesate exclusiv în browserul dumneavoastră (pe ecran) pentru a valida eligibilitatea generală și pentru a debloca butonul de programare. În baza noastră de date centrală se salvează doar un indicator tehnic de confirmare („Eligibilitate: Validată”), fără istoricul răspunsurilor la întrebări.
               </p>
 
               <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>4. Opțiunea „Programez pentru altcineva”</h4>
@@ -422,7 +424,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
               <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>5. Cât timp păstrăm datele dumneavoastră</h4>
               <p style={{ margin: '0 0 10px 0' }}>
-                Datele de contact (nume, e-mail, telefon) vor fi păstrate securizat doar pe durata organizării și centralizării acestei ediții. Toate conturile și datele colectate pentru evenimentul din noiembrie 2026 vor fi șterse definitiv și ireversibil din serverele noastre în termen de maximum 30 de zile de la finalizarea campaniei.
+                Datele de contact (nume, e-mail, telefon) vor fi păstrate atât timp cât aveți un cont activ în aplicație, pentru a facilita participarea la campaniile viitoare. Dacă decideti să nu mai faceti parte din această comunitate de donatori, puteti solicita ștergerea contului în orice moment (conform secțiunii 6), caz în care datele dumneavoastră identificabile vor fi eliminate definitiv, iar datele dumneavoastră istorice vor rămâne doar sub formă statistică, complet anonimă.
               </p>
 
               <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>6. Drepturile dumneavoastră conform GDPR</h4>
@@ -430,7 +432,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
               <ul style={{ margin: '0 0 10px 0', paddingLeft: '20px' }}>
                 <li>Dreptul de a solicita accesul la datele dumneavoastră.</li>
                 <li>Dreptul de a solicita corectarea datelor (de exemplu, modificarea numărului de telefon greșit).</li>
-                <li>Dreptul de a solicita ștergerea contului și a datelor înainte de termen (anularea programării).</li>
+                <li>Dreptul de a solicita ștergerea contului și a datelor dumneavoastră din baza de date.</li>
               </ul>
               <p style={{ margin: '0 0 10px 0' }}>
                 Pentru exercitarea oricăruia dintre aceste drepturi sau pentru întrebări legate de datele dumneavoastră, ne puteți contacta printr-un simplu mesaj la adresa de e-mail a organizatorilor campaniei.
