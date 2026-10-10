@@ -1,0 +1,1 @@
+ALTER TABLE waitlist ALTER COLUMN preferred_time_range VARCHAR(100);

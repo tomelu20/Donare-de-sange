@@ -108,21 +108,8 @@ class AppointmentOut(BaseModel):
 
 class WaitlistCreate(BaseModel):
     campaign_id: int
-    user_id: int
-    name: str
-    surname: str
-    phone: str
-    email: EmailStr
     preferred_time_range: str
     travel_time_minutes: int
-
-    @field_validator("phone")
-    @classmethod
-    def validate_waitlist_phone(cls, v: str) -> str:
-        v = v.strip()
-        if not re.match(r"^07\d{8}$", v):
-            raise ValueError("Numărul de telefon trebuie să aibă exact 10 cifre și să înceapă cu 07.")
-        return v
 
 class WaitlistOut(BaseModel):
     id: int

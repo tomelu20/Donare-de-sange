@@ -66,10 +66,10 @@ def add_to_waitlist(
         result = db.execute(insert_query, {
             "campaign_id": waitlist_data.campaign_id,
             "user_id": user_id,
-            "name": waitlist_data.name,
-            "surname": waitlist_data.surname,
-            "phone": waitlist_data.phone,
-            "email": waitlist_data.email,
+            "name": getattr(current_user, 'name', ''),
+            "surname": getattr(current_user, 'surname', ''),
+            "phone": getattr(current_user, 'phone', ''),
+            "email": getattr(current_user, 'email', ''),
             "preferred_time_range": waitlist_data.preferred_time_range,
             "travel_time_minutes": waitlist_data.travel_time_minutes
         })

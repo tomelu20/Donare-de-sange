@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import axios from 'axios';
 
 function WaitlistModal({ campaign, onClose, onRefresh }) {
+  const [isOpen, setIsOpen] = useState(true);
+
   const savedUser = sessionStorage.getItem('user_session');
   const user = savedUser ? JSON.parse(savedUser) : null;
+
+  if (!isOpen || !campaign || !user) return null;
 
   // Generăm toate zilele campaniei
   const campaignDays = [];
@@ -49,7 +53,13 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  if (!campaign || !user) return null;
+  const handleClose = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setIsOpen(false);
+  };
 
   // Generăm lista completă de ore (până la ora de sfârșit a campaniei)
   const generateHourOptions = (maxTimeStr) => {
@@ -101,7 +111,6 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
     const [h1, m1] = startTime.split(':').map(Number);
     const [h2, m2] = newEndTime.split(':').map(Number);
     if ((h1 * 60 + m1) >= (h2 * 60 + m2) - 15) {
-      // Ajustăm automat ora minimă cu un slot (15 min) înainte
       let totalMin = (h2 * 60 + m2) - 15;
       let newH = Math.floor(totalMin / 60).toString().padStart(2, '0');
       let newM = (totalMin % 60).toString().padStart(2, '0');
@@ -116,25 +125,47 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
     setSuccess('');
 
     let combinedTime = `Data: ${formatDateRO(selectedDate)} | Interval: de la ${startTime} până la ${endTime}`;
+    
+    const token = 
+      sessionStorage.getItem('token') || 
+      sessionStorage.getItem('access_token') ||
+      sessionStorage.getItem('jwt') ||
+      localStorage.getItem('token') || 
+      localStorage.getItem('access_token') ||
+      user?.token || 
+      user?.access_token || 
+      user?.jwt ||
+      (savedUser ? JSON.parse(savedUser)?.token || JSON.parse(savedUser)?.access_token : null);
 
     try {
       await axios.post('http://127.0.0.1:8000/waitlist/', {
         campaign_id: campaign.id,
-        name: user.name,
-        surname: user.surname,
-        phone: user.phone,
-        email: user.email,
         preferred_time_range: combinedTime,
         travel_time_minutes: parseInt(travelTime)
+      }, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        }
       });
 
       setSuccess('Te-ai înscris cu succes în lista de așteptare!');
       if (onRefresh) onRefresh();
       setTimeout(() => {
-        onClose();
+        setIsOpen(false);
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Eroare la înscrierea în lista de așteptare.');
+      const detail = err.response?.data?.detail;
+      let errorMsg = 'Eroare la înscrierea în lista de așteptare.';
+      
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+      } else if (typeof detail === 'object' && detail !== null) {
+        errorMsg = JSON.stringify(detail);
+      }
+      
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -146,11 +177,24 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
           <h3 style={{ margin: 0, color: '#e63946' }}>Înscriere Waitlist</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#999' }}>&times;</button>
+          <button type="button" onClick={handleClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#999' }}>&times;</button>
         </div>
 
         {error && <p style={{ color: 'red', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '14px' }}>{error}</p>}
-        {success && <p style={{ color: 'green', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold' }}>{success}</p>}
+        {success && (
+          <div>
+            <p style={{ color: 'green', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold' }}>{success}</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '15px' }}>
+              <button 
+                type="button" 
+                onClick={handleClose} 
+                style={{ padding: '8px 15px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Închide
+              </button>
+            </div>
+          </div>
+        )}
 
         {!success && (
           <form onSubmit={handleSubmit}>
@@ -225,7 +269,7 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid #eee', paddingTop: '15px' }}>
               <button 
                 type="button" 
-                onClick={onClose} 
+                onClick={handleClose} 
                 style={{ padding: '8px 15px', backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}
               >
                 Renunță
