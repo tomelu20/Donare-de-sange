@@ -22,87 +22,13 @@ router = APIRouter(
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-def send_appointment_confirmation_email(to_email: str, donor_name: str, campaign_title: str, location_name: str, address: str, appointment_date: str, slot_time: str):
-    email_user = os.getenv("EMAIL_USER")
-    email_password = os.getenv("EMAIL_PASSWORD")
-    
-    if not email_user or not email_password:
-        return
-        
-    slot_time_formatted = str(slot_time)[:5]
-    
-    # Formatare dată și oră pentru Google Calendar
-    clean_date = str(appointment_date).replace("-", "")
-    clean_time = slot_time_formatted.replace(":", "") + "00"
-    start_datetime = f"{clean_date}T{clean_time}"
-      
+def format_date_ro(date_str: str) -> str:
+    """Convertește data din YYYY-MM-DD în DD.MM.YYYY"""
     try:
-        dt_obj = datetime.strptime(f"{appointment_date} {slot_time_formatted}", "%Y-%m-%d %H:%M")
-        end_dt_obj = dt_obj + timedelta(minutes=30)
-        end_clean_date = end_dt_obj.strftime("%Y%m%d")
-        end_clean_time = end_dt_obj.strftime("%H%M%S")
-        end_datetime_str = f"{end_clean_date}T{end_clean_time}"
+        dt_obj = datetime.strptime(str(date_str)[:10], "%Y-%m-%d")
+        return dt_obj.strftime("%d.%m.%Y")
     except Exception:
-        end_datetime_str = start_datetime
-
-    cal_text = urllib.parse.quote(f"Donare de Sânge - {campaign_title}")
-    cal_details = urllib.parse.quote(f"Programare pentru donare de sânge în cadrul campaniei {campaign_title}.\nLocație: {location_name} ({address})")
-    cal_location = urllib.parse.quote(f"{location_name}, {address}")
-    
-    google_cal_url = (
-        f"https://calendar.google.com/calendar/render?action=TEMPLATE"
-        f"&text={cal_text}"
-        f"&dates={start_datetime}/{end_datetime_str}"
-        f"&details={cal_details}"
-        f"&location={cal_location}"
-    )
-
-    message = MIMEMultipart()
-    message["From"] = f"Donare Sange <{email_user}>"
-    message["To"] = to_email
-    message["Subject"] = f"🩸 Programare Confirmată: {campaign_title}"
-    
-    corp_email = f"""
-    <html>
-        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; background-color: #f4f4f9; padding: 20px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #e63946; color: white; padding: 20px; text-align: center;">
-                    <h2 style="margin: 0; font-size: 22px;">🎉 Programare Confirmată!</h2>
-                </div>
-                <div style="padding: 25px;">
-                    <p style="font-size: 16px;">Salut, <strong>{donor_name}</strong>!</p>
-                    <p style="font-size: 15px;">Programarea ta în cadrul campaniei <strong>{campaign_title}</strong> a fost înregistrată cu succes.</p>
-                    
-                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #e63946;">
-                        <p style="margin: 5px 0;">📅 <strong>Data:</strong> {appointment_date}</p>
-                        <p style="margin: 5px 0;">⏰ <strong>Ora:</strong> {slot_time_formatted}</p>
-                        <p style="margin: 5px 0;">📍 <strong>Locația:</strong> {location_name} ({address})</p>
-                    </div>
-
-                    <div style="margin: 30px 0; text-align: center;">
-                        <a href="{google_cal_url}" target="_blank" style="background-color: #4285F4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block;">
-                            📅 Salvează în Google Calendar
-                        </a>
-                    </div>
-                    
-                    <p style="font-size: 13px; color: #666; text-align: center; margin-top: 20px;">
-                        Te așteptăm cu drag! Îți mulțumim pentru gestul tău salvator.
-                    </p>
-                </div>
-            </div>
-        </body>
-    </html>
-    """
-    message.attach(MIMEText(corp_email, "html"))
-    
-    try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(email_user, email_password)
-        server.sendmail(email_user, to_email, message.as_string())
-        server.quit()
-    except Exception as e:
-        print(f"[Appointment Email Error] {e}")
+        return str(date_str)
 
 
 def send_appointment_cancellation_email(to_email: str, donor_name: str, campaign_title: str, appointment_date: str, slot_time: str):
@@ -113,6 +39,7 @@ def send_appointment_cancellation_email(to_email: str, donor_name: str, campaign
         return
         
     slot_time_formatted = str(slot_time)[:5]
+    appointment_date_formatted = format_date_ro(appointment_date)
 
     message = MIMEMultipart()
     message["From"] = f"Donare Sange <{email_user}>"
@@ -128,7 +55,7 @@ def send_appointment_cancellation_email(to_email: str, donor_name: str, campaign
                 </div>
                 <div style="padding: 25px;">
                     <p style="font-size: 16px;">Salut, <strong>{donor_name}</strong>!</p>
-                    <p style="font-size: 15px;">Îți confirmăm că programarea ta pentru campania <strong>{campaign_title}</strong> din data de <strong>{appointment_date}</strong>, ora <strong>{slot_time_formatted}</strong> a fost anulată cu succes.</p>
+                    <p style="font-size: 15px;">Îți confirmăm că programarea ta pentru campania <strong>{campaign_title}</strong> din data de <strong>{appointment_date_formatted}</strong>, ora <strong>{slot_time_formatted}</strong> a fost anulată cu succes.</p>
                     
                     <p style="font-size: 14px; color: #555; margin-top: 20px;">
                         Dacă a fost o greșeală sau dorești să te reprogramezi, te așteptăm oricând în aplicație.
@@ -439,22 +366,6 @@ def create_appointment(
 
     db.commit()
     
-    # Trimitere email confirmare + link calendar în fundal
-    recipient_email = appointment_data.guest_email if appointment_data.is_for_someone_else else current_user.email
-    donor_fullname = f"{appointment_data.guest_name} {appointment_data.guest_surname}" if appointment_data.is_for_someone_else else f"{current_user.name} {current_user.surname}"
-    
-    if recipient_email:
-        background_tasks.add_task(
-            send_appointment_confirmation_email,
-            to_email=recipient_email,
-            donor_name=donor_fullname,
-            campaign_title=campaign.title,
-            location_name=campaign.location_name,
-            address=campaign.address,
-            appointment_date=str(appointment_data.appointment_date),
-            slot_time=str(appointment_data.slot_time)
-        )
-    
     return {
         "id": row["id"],
         "campaign_id": row["campaign_id"],
@@ -468,7 +379,7 @@ def create_appointment(
 def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     app_query = text("""
         SELECT a.campaign_id, a.slot_time, a.appointment_date, a.is_for_someone_else, a.guest_email, a.guest_name, a.guest_surname,
-               u.email AS user_email, u.name AS user_name, u.surname AS user_surname, c.title AS campaign_title
+               u.email AS user_email, u.name AS user_name, u.surname AS user_surname, c.title AS campaign_title, a.status
         FROM appointments a
         JOIN campaigns c ON a.campaign_id = c.id
         LEFT JOIN users u ON a.user_id = u.id
@@ -478,6 +389,10 @@ def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session =
     
     if not app_row:
         raise HTTPException(status_code=404, detail="Programarea nu a fost găsită.")
+
+    # Dacă programarea era deja anulată, oprim execuția ca să nu trimitem e-mail duplicat
+    if app_row.status == 'cancelled':
+        return {"message": "Programarea era deja anulată."}
 
     campaign_id = app_row.campaign_id
     slot_time = app_row.slot_time
@@ -492,7 +407,6 @@ def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session =
     notify_next_in_waitlist(campaign_id, str(slot_time), background_tasks, db)
     db.commit()
 
-    # Trimitere email de anulare în fundal
     recipient_email = app_row.guest_email if app_row.is_for_someone_else else app_row.user_email
     donor_fullname = f"{app_row.guest_name} {app_row.guest_surname}" if app_row.is_for_someone_else else f"{app_row.user_name} {app_row.user_surname}"
 
