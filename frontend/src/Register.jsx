@@ -163,7 +163,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
     <div style={{ maxWidth: '420px', margin: '40px auto', padding: '24px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'sans-serif', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
       <h2 style={{ textAlign: 'center', color: '#e63946', marginBottom: '20px' }}>Înregistrare Cont Nou</h2>
 
-      {/* Mesajul de succes rămâne sus dacă aparține fluxului general */}
       {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginBottom: '15px' }}>{success}</p>}
 
       <form onSubmit={handleRegister}>
@@ -323,7 +322,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
           </div>
         </div>
 
-        {/* 6. SECȚIUNEA DE TERMENI ȘI CONDIȚII / POLITICA DE CONFIDENȚIALITATE (BIFĂ OBLIGATORIE) */}
+        {/* 6. SECȚIUNEA DE TERMENI ȘI CONDIȚII */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
             <input 
@@ -361,16 +360,14 @@ function Register({ onSwitch, onRegisterSuccess }) {
             borderRadius: '4px', 
             cursor: isLoading ? 'not-allowed' : 'pointer', 
             fontSize: '16px', 
-            fontWeight: 'bold',
-            transition: 'background-color 0.2s ease'
+            fontWeight: 'bold'
           }}
         >
           {isLoading ? 'Se creează contul...' : 'Creează cont'}
         </button>
 
-        {/* MESAJUL DE EROARE POZIȚIONAT DIRECT SUB BUTONUL DE SUBMIT */}
         {error && (
-          <div style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginTop: '12px', textAlign: 'center', fontWeight: '500', border: '1px solid #f5c6cb' }}>
+          <div style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginTop: '12px', textAlign: 'center', border: '1px solid #f5c6cb' }}>
             {error}
           </div>
         )}
@@ -383,7 +380,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
         </button>
       </p>
 
-      {/* MODAL CU TEXTUL INTEGRAL AL POLITICII DE CONFIDENȚIALITATE */}
+      {/* MODAL POLITICA DE CONFIDENȚIALITATE */}
       {showTermsModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '550px', width: '100%', maxHeight: '80vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
@@ -402,40 +399,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
               <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>2. Ce date colectăm și în ce scop</h4>
               <p style={{ margin: '0 0 5px 0' }}>
-                Colectăm doar datele minime necesare pentru buna desfășurare a campaniilor de donare de sânge organizate in Dumbrăvița și pentru generarea de statistici comunitare.
-                Pentru a vă putea asigura un loc și un interval orar la campaniile de donare de sange organizate de „Dumbrăvița Salveaza Vieți", colectăm următoarele date în momentul creării contului:
-              </p>
-              <ul style={{ margin: '0 0 10px 0', paddingLeft: '20px' }}>
-                <li><strong>Nume și prenume:</strong> Pentru identificarea dumneavoastră ca participant și gestionarea programărilor/contului.</li>
-                <li><strong>Adresă de e-mail:</strong> Pentru trimiterea automată a confirmării înscrierii, transmiterea detaliilor organizatorice și notificări privind viitoarele campanii de donare din localitate.</li>
-                <li><strong>Număr de telefon:</strong> Pentru a vă putea contacta rapid în caz de modificări urgente în programul recoltărilor.</li>
-                <li><strong>Istoricul donărilor în cadrul aplicației:</strong> Numărul de donări efectuate prin platformă, utilizat pentru istoricul contului dumneavoastră și statistici comunitare.</li>
-              </ul>
-
-              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>3. Datele privind starea de sănătate (Chestionarul de eligibilitate)</h4>
-              <p style={{ margin: '0 0 10px 0' }}>
-                Platforma noastră NU colectează și NU stochează date medicale. Chestionarul de pre-screening pe care îl completați înainte de programare are un rol strict informativ si de autoevaluare a eligibilitatii dumneavoastra prin prisma criteriilor impuse de Centrul Regional de Transfuzie Sanguină Timișoara. Răspunsurile dumneavoastră sunt procesate exclusiv în browserul dumneavoastră (pe ecran) pentru a valida eligibilitatea generală și pentru a debloca butonul de programare. În baza noastră de date centrală se salvează doar un indicator tehnic de confirmare („Eligibilitate: Validată”), fără istoricul răspunsurilor la întrebări.
-              </p>
-
-              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>4. Opțiunea „Programez pentru altcineva”</h4>
-              <p style={{ margin: '0 0 10px 0' }}>
-                Dacă utilizați platforma pentru a înscrie un membru al familiei sau un prieten, aveți obligația legală de a obține acordul prealabil al acelei persoane pentru a ne furniza numele și datele sale de contact.
-              </p>
-
-              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>5. Cât timp păstrăm datele dumneavoastră</h4>
-              <p style={{ margin: '0 0 10px 0' }}>
-                Datele de contact (nume, e-mail, telefon) vor fi păstrate atât timp cât aveți un cont activ în aplicație, pentru a facilita participarea la campaniile viitoare. Dacă decideti să nu mai faceti parte din această comunitate de donatori, puteti solicita ștergerea contului în orice moment (conform secțiunii 6), caz în care datele dumneavoastră identificabile vor fi eliminate definitiv, iar datele dumneavoastră istorice vor rămâne doar sub formă statistică, complet anonimă.
-              </p>
-
-              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>6. Drepturile dumneavoastră conform GDPR</h4>
-              <p style={{ margin: '0 0 5px 0' }}>În conformitate cu Regulamentul (UE) 2016/679, beneficiați de următoarele drepturi:</p>
-              <ul style={{ margin: '0 0 10px 0', paddingLeft: '20px' }}>
-                <li>Dreptul de a solicita accesul la datele dumneavoastră.</li>
-                <li>Dreptul de a solicita corectarea datelor (de exemplu, modificarea numărului de telefon greșit).</li>
-                <li>Dreptul de a solicita ștergerea contului și a datelor dumneavoastră din baza de date.</li>
-              </ul>
-              <p style={{ margin: '0 0 10px 0' }}>
-                Pentru exercitarea oricăruia dintre aceste drepturi sau pentru întrebări legate de datele dumneavoastră, ne puteți contacta printr-un simplu mesaj la adresa de e-mail a organizatorilor campaniei.
+                Colectăm doar datele minime necesare pentru buna desfășurare a campaniilor de donare de sânge organizate în Dumbrăvița și pentru generarea de statistici comunitare.
               </p>
             </div>
 

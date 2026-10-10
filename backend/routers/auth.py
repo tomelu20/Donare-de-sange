@@ -77,7 +77,7 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
         )
     return current_user
 
-def send_email_via_gmail(to_email: str, code: str):
+def send_email_via_gmail(to_email: str, code: str, subject_title: str = "Codul tau de verificare - Donare Sange", html_message_content: str = None):
     email_user = os.getenv("EMAIL_USER")
     email_password = os.getenv("EMAIL_PASSWORD")
     
@@ -88,19 +88,21 @@ def send_email_via_gmail(to_email: str, code: str):
     message = MIMEMultipart()
     message["From"] = f"Donare Sange <{email_user}>"
     message["To"] = to_email
-    message["Subject"] = "Codul tau de verificare - Donare Sange"
+    message["Subject"] = subject_title
     
-    corp_email = f"""
-    <html>
-        <body>
-            <h3>Salutare!</h3>
-            <p>Codul tău de verificare pentru crearea contului în aplicația Donare Sânge este:</p>
-            <h2 style="color: #e63946; font-size: 24px; letter-spacing: 2px;">{code}</h2>
-            <p>Codul este valabil timp de 5 minute.</p>
-        </body>
-    </html>
-    """
-    message.attach(MIMEText(corp_email, "html"))
+    if not html_message_content:
+        html_message_content = f"""
+        <html>
+            <body>
+                <h3>Salutare!</h3>
+                <p>Codul tău de verificare este:</p>
+                <h2 style="color: #e63946; font-size: 24px; letter-spacing: 2px;">{code}</h2>
+                <p>Codul este valabil timp de 5 minute.</p>
+            </body>
+        </html>
+        """
+        
+    message.attach(MIMEText(html_message_content, "html"))
     
     try:
         server = smtplib.SMTP("smtp.gmail.com", 587)
@@ -291,6 +293,135 @@ def login(request: Request, response: Response, user_credentials: UserLogin, db:
 def logout(response: Response):
     response.delete_cookie(key="access_token")
     return {"detail": "Deconectare reușită."}
+
+# ==========================================
+# SECȚIUNE NOUĂ: FORGOT / RESET PASSWORD
+# ==========================================
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    code: str
+    new_password: str
+
+@router.post("/forgot-password")
+@limiter.limit("5/minute")
+def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Adresă de email invalidă."
+        )
+    
+    user = db.query(User).filter(User.email == email).first()
+    # Din motive de securitate, chiar dacă utilizatorul nu există, returnăm un mesaj neutru/de succes
+    # pentru a preveni enumerarea adreselor de email din baza de date.
+    if not user:
+        return {"detail": "Dacă adresa de email există în sistem, un cod de resetare a fost trimis."}
+
+    code = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+    
+    db.query(EmailVerificationCode).filter(EmailVerificationCode.email == email).delete()
+    
+    reset_entry = EmailVerificationCode(
+        email=email,
+        code=code,
+        expires_at=expires_at,
+        verified=False,
+        attempts=0
+    )
+    db.add(reset_entry)
+    db.commit()
+    
+    html_content = f"""
+    <html>
+        <body>
+            <h3>Salutare!</h3>
+            <p>Ai solicitat resetarea parolei pentru contul tău din aplicația Donare Sânge.</p>
+            <p>Codul tău de resetare este:</p>
+            <h2 style="color: #e63946; font-size: 24px; letter-spacing: 2px;">{code}</h2>
+            <p>Acest cod este valabil timp de 5 minute. Dacă nu ai solicitat resetarea, ignoră acest email.</p>
+        </body>
+    </html>
+    """
+    
+    send_email_via_gmail(
+        to_email=email,
+        code=code,
+        subject_title="Resetare parolă - Donare Sânge",
+        html_message_content=html_content
+    )
+    
+    return {"detail": "Dacă adresa de email există în sistem, un cod de resetare a fost trimis."}
+
+@router.post("/reset-password")
+@limiter.limit("5/minute")
+def reset_password(request: Request, payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
+    code = payload.code.strip()
+    new_password = payload.new_password
+
+    if len(new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Parola nouă trebuie să conțină cel puțin 8 caractere."
+        )
+
+    verification_data = db.query(EmailVerificationCode).filter(EmailVerificationCode.email == email).first()
+    
+    if not verification_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nu există nicio cerere de resetare activă pentru acest email."
+        )
+        
+    now_utc = datetime.now(timezone.utc)
+    exp_at = verification_data.expires_at
+    if exp_at.tzinfo is None:
+        exp_at = exp_at.replace(tzinfo=timezone.utc)
+
+    if now_utc > exp_at:
+        db.delete(verification_data)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Codul a expirat. Solicitați un nou cod de resetare."
+        )
+        
+    if verification_data.attempts >= 3:
+        db.delete(verification_data)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Prea multe încercări greșite. Solicitați un nou cod."
+        )
+
+    if verification_data.code != code:
+        verification_data.attempts += 1
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Codul introdus este incorect."
+        )
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilizatorul nu a fost găsit."
+        )
+
+    user.password_hash = pwd_context.hash(new_password)
+    db.delete(verification_data)
+    db.commit()
+
+    return {"detail": "Parola a fost resetată cu succes! Vă puteți conecta cu noua parolă."}
+
+# ==========================================
 
 class UserUpdatePayload(BaseModel):
     name: str
