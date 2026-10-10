@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import text  # <-- Avem nevoie de text pentru a scrie SQL nativ
+from sqlalchemy import text
 from typing import List
 from datetime import datetime, timedelta, time
 
 from database import get_db
 from schemas.schemas import CampaignCreate, CampaignOut, SlotOut
-from models import Campaign
+from models import Campaign, User
+from routers.auth import send_email_via_gmail  # <--- Importul funcției de trimitere mail
 
 router = APIRouter(
     prefix="/campaigns",
@@ -33,7 +34,7 @@ def toggle_campaign_status(id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=CampaignOut, status_code=status.HTTP_201_CREATED)
 def create_campaign(campaign_data: CampaignCreate, db: Session = Depends(get_db)):
-    # Creează o campanie nouă (Logica pentru Admin Panel)
+    # Creează o campanie nouă
     new_campaign = Campaign(
         title=campaign_data.title,
         location_name=campaign_data.location_name,
@@ -50,6 +51,37 @@ def create_campaign(campaign_data: CampaignCreate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(new_campaign)
     
+    # --- TRIMITERE EMAIL AUTOMAT CĂTRE ABONAȚI ---
+    try:
+        subscribed_users = db.query(User).filter(User.notify_campaigns == True).all()
+        
+        subject = f"Campanie nouă de donare: {new_campaign.title}"
+        
+        for user in subscribed_users:
+            if user.email:
+                html_content = f"""
+                <html>
+                    <body>
+                        <h3>Salutare, {user.name}!</h3>
+                        <p>S-au deschis înscrierile pentru o nouă campanie de donare de sânge: <b>{new_campaign.title}</b>.</p>
+                        <p><b>Locație:</b> {new_campaign.location_name} ({new_campaign.address})</p>
+                        <p><b>Dată:</b> {new_campaign.date}</p>
+                        <p>Te așteptăm să te programezi în aplicație!</p>
+                        <hr>
+                        <p style="font-size: 11px; color: #666;">Primești acest email deoarece ai bifat opțiunea de informare privind campaniile noi și restricțiile de călătorie.</p>
+                    </body>
+                </html>
+                """
+                send_email_via_gmail(
+                    to_email=user.email,
+                    code="", 
+                    subject_title=subject,
+                    html_message_content=html_content
+                )
+    except Exception as e:
+        print(f"[Eroare Notificări Campanii]: {e}")
+    # ---------------------------------------------
+    
     return new_campaign
 
 @router.get("/{id}", response_model=CampaignOut)
@@ -64,27 +96,10 @@ def get_campaign_by_id(id: int, db: Session = Depends(get_db)):
 
 @router.get("/{id}/slots", response_model=List[SlotOut])
 def get_campaign_slots(id: int, db: Session = Depends(get_db)):
-    # 1. Preluăm campania
     campaign = db.query(Campaign).filter(Campaign.id == id, Campaign.is_active == True).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campania nu a fost găsită sau este inactivă.")
 
-    # 2. Preluăm toate programările active pentru această campanie
-    query_sql = text("""
-        SELECT CAST(created_at AS DATE) as app_date, slot_time, COUNT(id) AS booked_count
-        FROM appointments 
-        WHERE campaign_id = :camp_id AND status != 'cancelled'
-        GROUP BY CAST(created_at AS DATE), slot_time
-    """)
-    # Notă: Dacă în tabela ta appointments nu ai data salvată separat ci doar ora, 
-    # ne vom baza pe data campaniei sau corelarea sloturilor. 
-    # Cel mai sigur este să salvăm programările raportat la zi.
-    
-    # Pentru a fi 100% compatibili cu SQL-ul tău, presupunem că appointments are nevoie și de dată 
-    # dar ca să nu modificăm tabela appointments, putem grupa după o nouă coloană de dată dacă ai adăugat-o,
-    # sau presupunem că programările se leagă direct de slot_time și o dată specifică.
-    # Să folosim o abordare curată:
-    
     query_sql = text("""
         SELECT appointment_date, slot_time, COUNT(id) AS booked_count
         FROM appointments 
@@ -96,8 +111,6 @@ def get_campaign_slots(id: int, db: Session = Depends(get_db)):
         rezultat = db.execute(query_sql, {"camp_id": id}).fetchall()
         taken_slots = {(row.appointment_date, row.slot_time): row.booked_count for row in rezultat}
     except Exception:
-        # Fallback în cazul în care nu ai adăugat încă coloana appointment_date în appointments:
-        # Presupunem că tabela appointments folosește doar slot_time (cazul tău inițial)
         rezultat = db.execute(text("""
             SELECT slot_time, COUNT(id) AS booked_count 
             FROM appointments WHERE campaign_id = :camp_id AND status != 'cancelled' GROUP BY slot_time
@@ -105,11 +118,7 @@ def get_campaign_slots(id: int, db: Session = Depends(get_db)):
         taken_slots = {(campaign.date, row.slot_time): row.booked_count for row in rezultat}
 
     slots = []
-    
-    # Determinăm data de început și de sfârșit
-    # Dacă nu vrei să adaugi end_date în baza de date, putem folosi proprietatea că dacă end_date nu există, e campanie de o zi
     start_date = campaign.date
-    # Verificăm dacă modelul tău are end_date, altfel fallback la o singură zi
     end_date = getattr(campaign, 'end_date', campaign.date) 
 
     current_date = start_date
@@ -120,13 +129,11 @@ def get_campaign_slots(id: int, db: Session = Depends(get_db)):
         while current_datetime < end_datetime:
             current_time_obj = current_datetime.time()
             
-            # Verificăm câte locuri sunt ocupate în această zi specifică la această oră
             booked_count = taken_slots.get((current_date, current_time_obj), 0)
             remaining_capacity = campaign.capacity_per_slot - booked_count
             
-            # Adăugăm data în structura de slot trimisă către Frontend
             slots.append({
-                "date": current_date.isoformat(), # "YYYY-MM-DD"
+                "date": current_date.isoformat(),
                 "time": current_time_obj.strftime("%H:%M:%S"),
                 "available_slots": max(0, remaining_capacity),
                 "is_available": remaining_capacity > 0

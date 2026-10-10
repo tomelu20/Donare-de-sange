@@ -12,6 +12,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
   const [password, setPassword] = useState('');
   const [emailCode, setEmailCode] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [notifyCampaigns, setNotifyCampaigns] = useState(false); // <--- Noua opțiune
   const [showTermsModal, setShowTermsModal] = useState(false);
 
   const [isCodeSent, setIsCodeSent] = useState(false);
@@ -126,7 +127,8 @@ function Register({ onSwitch, onRegisterSuccess }) {
           phone: phone.trim(),
           email: email.trim(),
           password: password,
-          email_code: emailCode.trim()
+          email_code: emailCode.trim(),
+          notify_campaigns: notifyCampaigns // <--- Transmis către backend
         },
         { withCredentials: true }
       );
@@ -141,6 +143,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
       setPassword('');
       setEmailCode('');
       setAcceptedTerms(false);
+      setNotifyCampaigns(false);
       setIsCodeSent(false);
       setIsVerified(false);
 
@@ -323,7 +326,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
         </div>
 
         {/* 6. SECȚIUNEA DE TERMENI ȘI CONDIȚII */}
-        <div style={{ marginBottom: '16px' }}>
+        <div style={{ marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
             <input 
               type="checkbox"
@@ -343,6 +346,23 @@ function Register({ onSwitch, onRegisterSuccess }) {
                 Politica de Confidențialitate
               </button>{' '}
               și prelucrarea datelor cu caracter personal.*
+            </label>
+          </div>
+        </div>
+
+        {/* 7. LINIE NOUĂ: OPȚIUNE NOTIFICĂRI CAMPANII NOI ȘI RESTRICȚII */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <input 
+              type="checkbox"
+              id="notify-checkbox"
+              checked={notifyCampaigns}
+              onChange={(e) => setNotifyCampaigns(e.target.checked)}
+              disabled={isLoading}
+              style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
+            />
+            <label htmlFor="notify-checkbox" style={{ fontSize: '13px', color: '#333', lineHeight: '1.4', cursor: 'pointer' }}>
+              doresc sa fiu informat pe mail cand se deschid campanii noi, cand apar restrictii de donare legate de unde am calatorit etc
             </label>
           </div>
         </div>
