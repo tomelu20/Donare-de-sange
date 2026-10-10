@@ -323,7 +323,6 @@ function Dashboard({ onLogout }) {
     if (!dateString) return '';
     const parts = dateString.split('-');
     if (parts.length !== 3) return dateString;
-    // Dacă vine în format YYYY-MM-DD -> îl transformăm în DD-MM-YYYY
     if (parts[0].length === 4) {
       return `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
@@ -1067,7 +1066,7 @@ function Dashboard({ onLogout }) {
       {waitlistCampaign && (
         <WaitlistModal 
           campaign={waitlistCampaign} 
-          onClose={() => setWaitlistCalendar(null)} 
+          onClose={() => setWaitlistCampaign(null)} 
           onRefresh={fetchData} 
         />
       )}

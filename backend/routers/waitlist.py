@@ -20,11 +20,13 @@ def add_to_waitlist(
 ):
     user_id = current_user.id
     
+    # Verificăm doar programările personale active (excludem programările făcute pentru altcineva și cele anulate)
     appointment_check_query = text("""
         SELECT COUNT(id) AS existing_appointments 
         FROM appointments 
         WHERE user_id = :user_id 
           AND campaign_id = :campaign_id 
+          AND is_for_someone_else = 0
           AND status IN ('confirmed', 'attended')
     """)
     appointment_check = db.execute(appointment_check_query, {
@@ -35,7 +37,7 @@ def add_to_waitlist(
     if appointment_check.existing_appointments > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ai deja o programare activă confirmată în această campanie! Nu te poți înscrie în lista de așteptare."
+            detail="Ai deja o programare personală activă confirmată în această campanie! Nu te poți înscrie în lista de așteptare."
         )
 
     waitlist_check_query = text("""
@@ -144,13 +146,11 @@ def check_waitlist_offer(id: int, slot_time: str, db: Session = Depends(get_db))
         FROM appointments 
         WHERE campaign_id = :camp_id 
           AND slot_time = :slot_time 
-          AND appointment_date = :app_date
           AND status != 'cancelled'
     """)
     booked_result = db.execute(count_query, {
         "camp_id": offer.campaign_id,
-        "slot_time": slot_time,
-        "app_date": offer.campaign_date
+        "slot_time": slot_time
     }).fetchone()
 
     if booked_result.booked >= offer.capacity_per_slot:
@@ -198,13 +198,11 @@ def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depend
         FROM appointments 
         WHERE campaign_id = :camp_id 
           AND slot_time = :slot_time 
-          AND appointment_date = :app_date
           AND status != 'cancelled'
     """)
     booked_result = db.execute(count_query, {
         "camp_id": wait_entry.campaign_id,
-        "slot_time": slot_time,
-        "app_date": wait_entry.campaign_date
+        "slot_time": slot_time
     }).fetchone()
 
     if booked_result.booked >= wait_entry.capacity_per_slot:
@@ -216,22 +214,21 @@ def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depend
     app_check = db.execute(text("""
         SELECT COUNT(id) AS cnt 
         FROM appointments 
-        WHERE user_id = :u_id AND campaign_id = :c_id AND status = 'confirmed'
+        WHERE user_id = :u_id AND campaign_id = :c_id AND is_for_someone_else = 0 AND status IN ('confirmed', 'attended')
     """), {"u_id": wait_entry.user_id, "c_id": wait_entry.campaign_id}).fetchone()
 
     if app_check.cnt > 0:
-        raise HTTPException(status_code=400, detail="Ai deja o programare confirmată activă la această campanie!")
+        raise HTTPException(status_code=400, detail="Ai deja o programare personală confirmată activă la această campanie!")
 
     try:
         insert_app_query = text("""
-            INSERT INTO appointments (campaign_id, user_id, slot_time, appointment_date, status, created_at)
-            VALUES (:camp_id, :user_id, :slot_time, :app_date, 'confirmed', GETDATE())
+            INSERT INTO appointments (campaign_id, user_id, slot_time, status, created_at, is_for_someone_else)
+            VALUES (:camp_id, :user_id, :slot_time, 'confirmed', GETDATE(), 0)
         """)
         db.execute(insert_app_query, {
             "camp_id": wait_entry.campaign_id,
             "user_id": wait_entry.user_id,
-            "slot_time": slot_time,
-            "app_date": wait_entry.campaign_date
+            "slot_time": slot_time
         })
 
         db.execute(text("UPDATE waitlist SET status = 'accepted' WHERE id = :wait_id"), {"wait_id": id})

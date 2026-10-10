@@ -59,6 +59,8 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
       e.stopPropagation();
     }
     setIsOpen(false);
+    // Dacă funcția onClose este transmisă din componenta părinte pentru demontare:
+    if (onClose) onClose();
   };
 
   // Generăm lista completă de ore (până la ora de sfârșit a campaniei)
@@ -152,6 +154,7 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
       if (onRefresh) onRefresh();
       setTimeout(() => {
         setIsOpen(false);
+        if (onClose) onClose();
       }, 2000);
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -177,6 +180,7 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
           <h3 style={{ margin: 0, color: '#e63946' }}>Înscriere Waitlist</h3>
+          {/* Verificat: are type="button" și apelează handleClose */}
           <button type="button" onClick={handleClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#999' }}>&times;</button>
         </div>
 
@@ -185,6 +189,7 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
           <div>
             <p style={{ color: 'green', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold' }}>{success}</p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '15px' }}>
+              {/* Adăugat type="button" explicit și apelarea corectă a lui handleClose */}
               <button 
                 type="button" 
                 onClick={handleClose} 
