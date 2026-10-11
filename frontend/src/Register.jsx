@@ -12,7 +12,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
   const [password, setPassword] = useState('');
   const [emailCode, setEmailCode] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [notifyCampaigns, setNotifyCampaigns] = useState(false); // <--- Noua opțiune
+  const [notifyCampaigns, setNotifyCampaigns] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
   const [isCodeSent, setIsCodeSent] = useState(false);
@@ -128,7 +128,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
           email: email.trim(),
           password: password,
           email_code: emailCode.trim(),
-          notify_campaigns: notifyCampaigns // <--- Transmis către backend
+          notify_campaigns: notifyCampaigns
         },
         { withCredentials: true }
       );
@@ -170,14 +170,14 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
       <form onSubmit={handleRegister}>
         
-        {/* 1. NUME */}
+        {/* 1. NUME DE FAMILIE */}
         <div style={{ marginBottom: '14px' }}>
-          <label htmlFor="reg-name" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Nume:</label>
+          <label htmlFor="reg-surname" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Nume (Nume de familie):</label>
           <input 
-            id="reg-name"
+            id="reg-surname"
             type="text" 
-            value={name} 
-            onChange={(e) => handleNameInput(e.target.value, setName)} 
+            value={surname} 
+            onChange={(e) => handleNameInput(e.target.value, setSurname)} 
             required 
             placeholder="ex: Popescu"
             disabled={isLoading}
@@ -187,12 +187,12 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
         {/* 2. PRENUME */}
         <div style={{ marginBottom: '14px' }}>
-          <label htmlFor="reg-surname" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Prenume:</label>
+          <label htmlFor="reg-name" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Prenume:</label>
           <input 
-            id="reg-surname"
+            id="reg-name"
             type="text" 
-            value={surname} 
-            onChange={(e) => handleNameInput(e.target.value, setSurname)} 
+            value={name} 
+            onChange={(e) => handleNameInput(e.target.value, setName)} 
             required 
             placeholder="ex: Andrei"
             disabled={isLoading}
@@ -350,7 +350,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
           </div>
         </div>
 
-        {/* 7. LINIE NOUĂ: OPȚIUNE NOTIFICĂRI CAMPANII NOI ȘI RESTRICȚII */}
+        {/* 7. OPȚIUNE NOTIFICĂRI CAMPANII NOI ȘI RESTRICȚII */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
             <input 
