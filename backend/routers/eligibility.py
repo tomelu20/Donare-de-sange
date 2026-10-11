@@ -112,7 +112,6 @@ def send_appointment_confirmation_email(to_email: str, donor_name: str, campaign
     except Exception as e:
         print(f"[Appointment Email Error] {e}")
 
-# Schema Pydantic locală pentru crearea unei întrebări noi
 class QuestionCreatePayload(BaseModel):
     question_text: str
     type: str
@@ -136,9 +135,119 @@ def submit_appointment_with_answers(
     db: Session = Depends(get_db)
 ):
     current_user_id = current_user.id
-    
+    camp_id = payload.appointment.campaign_id
+    is_for_someone_else = payload.appointment.is_for_someone_else
+
+    # --- VERIFICĂRI ANTI-DUPLICAT (HTTP 400 CURAT) ---
+    if is_for_someone_else:
+        if not payload.appointment.guest_phone and not payload.appointment.guest_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="Numărul de telefon sau adresa de email a persoanei programate este obligatorie."
+            )
+            
+        # 1. Verificare unicitate email invitat per campanie
+        if payload.appointment.guest_email:
+            guest_email_check = db.execute(text("""
+                SELECT COUNT(id) AS existing_count 
+                FROM appointments 
+                WHERE campaign_id = :camp_id 
+                  AND guest_email = :guest_email 
+                  AND status IN ('confirmed', 'attended')
+            """), {
+                "camp_id": camp_id,
+                "guest_email": payload.appointment.guest_email
+            }).fetchone()
+
+            if guest_email_check.existing_count > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Adresa de email {payload.appointment.guest_email} este deja înscrisă la o programare activă în această campanie! Vă rugăm să folosiți o altă adresă de email."
+                )
+
+        # 2. Verificare unicitate telefon invitat per campanie
+        if payload.appointment.guest_phone:
+            guest_check = db.execute(text("""
+                SELECT COUNT(id) AS existing_count 
+                FROM appointments 
+                WHERE campaign_id = :camp_id 
+                  AND guest_phone = :guest_phone 
+                  AND status IN ('confirmed', 'attended')
+            """), {
+                "camp_id": camp_id,
+                "guest_phone": payload.appointment.guest_phone
+            }).fetchone()
+
+            if guest_check.existing_count > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Persoana cu numărul de telefon {payload.appointment.guest_phone} are deja o programare activă în această campanie!"
+                )
+
+        # 3. Verificare dacă invitatul are cont propriu și e deja programat
+        account_holder_check = db.execute(text("""
+            SELECT COUNT(a.id) AS existing_count
+            FROM appointments a
+            JOIN users u ON a.user_id = u.id
+            WHERE a.campaign_id = :camp_id
+              AND (u.phone = :guest_phone OR u.email = :guest_email)
+              AND a.is_for_someone_else = 0
+              AND a.status IN ('confirmed', 'attended')
+        """), {
+            "camp_id": camp_id,
+            "guest_phone": payload.appointment.guest_phone or "",
+            "guest_email": payload.appointment.guest_email or ""
+        }).fetchone()
+
+        if account_holder_check.existing_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Această persoană deține un cont în aplicație și este deja programată personal la această campanie!"
+            )
+            
+    else:
+        user_check = db.execute(text("""
+            SELECT COUNT(id) AS existing_count 
+            FROM appointments 
+            WHERE user_id = :user_id 
+              AND campaign_id = :camp_id 
+              AND is_for_someone_else = 0
+              AND status IN ('confirmed', 'attended')
+        """), {
+            "user_id": current_user_id,
+            "camp_id": camp_id
+        }).fetchone()
+        
+        if user_check.existing_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ai deja o programare activă în această campanie!"
+            )
+
+        user_profile = db.execute(text("SELECT phone, email FROM users WHERE id = :user_id"), {"user_id": current_user_id}).fetchone()
+        if user_profile:
+            already_invited_check = db.execute(text("""
+                SELECT COUNT(id) AS existing_count
+                FROM appointments
+                WHERE campaign_id = :camp_id
+                  AND (guest_phone = :user_phone OR guest_email = :user_email)
+                  AND is_for_someone_else = 1
+                  AND status IN ('confirmed', 'attended')
+            """), {
+                "camp_id": camp_id,
+                "user_phone": user_profile.phone or "",
+                "user_email": user_profile.email or ""
+            }).fetchone()
+
+            if already_invited_check.existing_count > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Nu te poți programa deoarece un alt utilizator te-a înscris deja ca invitat în această campanie!"
+                )
+    # --- SFÂRȘIT VERIFICĂRI ---
+
     campaign_query = text("SELECT title, location_name, address, capacity_per_slot, is_active FROM campaigns WHERE id = :camp_id")
-    campaign = db.execute(campaign_query, {"camp_id": payload.appointment.campaign_id}).fetchone()
+    campaign = db.execute(campaign_query, {"camp_id": camp_id}).fetchone()
     
     if not campaign or not campaign.is_active:
         raise HTTPException(status_code=400, detail="Campania nu este disponibilă.")
@@ -151,7 +260,7 @@ def submit_appointment_with_answers(
           AND status != 'cancelled'
     """)
     booked_result = db.execute(count_query, {
-        "camp_id": payload.appointment.campaign_id,
+        "camp_id": camp_id,
         "slot_time": payload.appointment.slot_time,
         "app_date": payload.appointment.appointment_date
     }).fetchone()
@@ -163,24 +272,25 @@ def submit_appointment_with_answers(
         insert_app_query = text("""
             INSERT INTO appointments (
                 campaign_id, user_id, slot_time, appointment_date, status, created_at,
-                is_for_someone_else, guest_name, guest_surname, guest_phone, guest_blood_group
+                is_for_someone_else, guest_name, guest_surname, guest_phone, guest_email, guest_blood_group
             )
             OUTPUT INSERTED.id, INSERTED.campaign_id, INSERTED.user_id, INSERTED.slot_time, INSERTED.status, INSERTED.created_at
             VALUES (
                 :camp_id, :user_id, :slot_time, :app_date, 'confirmed', GETDATE(),
-                :is_someone_else, :g_name, :g_surname, :g_phone, :g_blood
+                :is_someone_else, :g_name, :g_surname, :g_phone, :g_email, :g_blood
             )
         """)
         
         app_result = db.execute(insert_app_query, {
-            "camp_id": payload.appointment.campaign_id,
+            "camp_id": camp_id,
             "user_id": current_user_id,
             "slot_time": payload.appointment.slot_time,
             "app_date": payload.appointment.appointment_date,
-            "is_someone_else": 1 if payload.appointment.is_for_someone_else else 0,
+            "is_someone_else": 1 if is_for_someone_else else 0,
             "g_name": payload.appointment.guest_name,
             "g_surname": payload.appointment.guest_surname,
             "g_phone": payload.appointment.guest_phone,
+            "g_email": payload.appointment.guest_email,
             "g_blood": payload.appointment.guest_blood_group
         })
         
@@ -201,8 +311,8 @@ def submit_appointment_with_answers(
         
         db.commit()
         
-        recipient_email = payload.appointment.guest_email if payload.appointment.is_for_someone_else else current_user.email
-        donor_fullname = f"{payload.appointment.guest_name} {payload.appointment.guest_surname}" if payload.appointment.is_for_someone_else else f"{current_user.name} {current_user.surname}"
+        recipient_email = payload.appointment.guest_email if is_for_someone_else else current_user.email
+        donor_fullname = f"{payload.appointment.guest_name} {payload.appointment.guest_surname}" if is_for_someone_else else f"{current_user.name} {current_user.surname}"
         
         if recipient_email:
             background_tasks.add_task(

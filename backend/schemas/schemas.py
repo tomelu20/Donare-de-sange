@@ -82,8 +82,15 @@ class AppointmentCreate(BaseModel):
     guest_name: Optional[str] = None
     guest_surname: Optional[str] = None
     guest_phone: Optional[str] = None
-    guest_email: Optional[EmailStr] = None
+    guest_email: Optional[str] = None
     guest_blood_group: Optional[str] = "Nu știu"
+
+    @field_validator("guest_email", mode="before")
+    @classmethod
+    def validate_guest_email_empty(cls, v: Optional[str]) -> Optional[str]:
+        if v == "" or (isinstance(v, str) and not v.strip()):
+            return None
+        return v
 
     @field_validator("guest_phone")
     @classmethod

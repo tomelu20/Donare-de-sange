@@ -220,39 +220,64 @@ def create_appointment(
     current_user_id = current_user.id 
 
     if appointment_data.is_for_someone_else:
-        if not appointment_data.guest_phone:
-            raise HTTPException(status_code=400, detail="Numărul de telefon al persoanei programate este obligatoriu.")
+        # Verificare opțională/obligatorie pentru telefon sau email invitat
+        if not appointment_data.guest_phone and not appointment_data.guest_email:
+            raise HTTPException(status_code=400, detail="Numărul de telefon sau adresa de email a persoanei programate este obligatorie.")
             
-        guest_check_query = text("""
-            SELECT COUNT(id) AS existing_count 
-            FROM appointments 
-            WHERE campaign_id = :camp_id 
-              AND guest_phone = :guest_phone 
-              AND status IN ('confirmed', 'attended')
-        """)
-        guest_check = db.execute(guest_check_query, {
-            "camp_id": appointment_data.campaign_id,
-            "guest_phone": appointment_data.guest_phone
-        }).fetchone()
+        # 1. Verificare după telefon (guest_phone)
+        if appointment_data.guest_phone:
+            guest_check_query = text("""
+                SELECT COUNT(id) AS existing_count 
+                FROM appointments 
+                WHERE campaign_id = :camp_id 
+                  AND guest_phone = :guest_phone 
+                  AND status IN ('confirmed', 'attended')
+            """)
+            guest_check = db.execute(guest_check_query, {
+                "camp_id": appointment_data.campaign_id,
+                "guest_phone": appointment_data.guest_phone
+            }).fetchone()
 
-        if guest_check.existing_count > 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Persoana cu numărul de telefon {appointment_data.guest_phone} are deja o programare activă ca invitat în această campanie!"
-            )
+            if guest_check.existing_count > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Persoana cu numărul de telefon {appointment_data.guest_phone} are deja o programare activă ca invitat în această campanie!"
+                )
 
+        # 2. Verificare după email (guest_email) - NOU ADĂUGAT
+        if appointment_data.guest_email:
+            guest_email_check_query = text("""
+                SELECT COUNT(id) AS existing_count 
+                FROM appointments 
+                WHERE campaign_id = :camp_id 
+                  AND guest_email = :guest_email 
+                  AND status IN ('confirmed', 'attended')
+            """)
+            guest_email_check = db.execute(guest_email_check_query, {
+                "camp_id": appointment_data.campaign_id,
+                "guest_email": appointment_data.guest_email
+            }).fetchone()
+
+            if guest_email_check.existing_count > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Persoana cu adresa de email {appointment_data.guest_email} are deja o programare activă ca invitat în această campanie!"
+                )
+
+        # 3. Verificare dacă invitatul este de fapt titularul unui cont care s-a programat personal (după telefon sau email)
         account_holder_check_query = text("""
             SELECT COUNT(a.id) AS existing_count
             FROM appointments a
             JOIN users u ON a.user_id = u.id
             WHERE a.campaign_id = :camp_id
-              AND u.phone = :guest_phone
+              AND (u.phone = :guest_phone OR u.email = :guest_email)
               AND a.is_for_someone_else = 0
               AND a.status IN ('confirmed', 'attended')
         """)
         account_holder_check = db.execute(account_holder_check_query, {
             "camp_id": appointment_data.campaign_id,
-            "guest_phone": appointment_data.guest_phone
+            "guest_phone": appointment_data.guest_phone or "",
+            "guest_email": appointment_data.guest_email or ""
         }).fetchone()
 
         if account_holder_check.existing_count > 0:
@@ -262,6 +287,7 @@ def create_appointment(
             )
             
     else:
+        # Cazul în care utilizatorul se programează pe sine
         user_check_query = text("""
             SELECT COUNT(id) AS existing_count 
             FROM appointments 
@@ -281,21 +307,23 @@ def create_appointment(
                 detail="Ai deja o programare activă în această campanie!"
             )
 
-        user_profile_query = text("SELECT phone FROM users WHERE id = :user_id")
+        user_profile_query = text("SELECT phone, email FROM users WHERE id = :user_id")
         user_profile = db.execute(user_profile_query, {"user_id": current_user_id}).fetchone()
         
         if user_profile:
+            # Verificăm dacă utilizatorul a fost înscris deja de altcineva ca invitat (după telefon sau email)
             already_invited_check_query = text("""
                 SELECT COUNT(id) AS existing_count
                 FROM appointments
                 WHERE campaign_id = :camp_id
-                  AND guest_phone = :user_phone
+                  AND (guest_phone = :user_phone OR guest_email = :user_email)
                   AND is_for_someone_else = 1
                   AND status IN ('confirmed', 'attended')
             """)
             already_invited_check = db.execute(already_invited_check_query, {
                 "camp_id": appointment_data.campaign_id,
-                "user_phone": user_profile.phone
+                "user_phone": user_profile.phone or "",
+                "user_email": user_profile.email or ""
             }).fetchone()
 
             if already_invited_check.existing_count > 0:
@@ -390,7 +418,6 @@ def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session =
     if not app_row:
         raise HTTPException(status_code=404, detail="Programarea nu a fost găsită.")
 
-    # Dacă programarea era deja anulată, oprim execuția ca să nu trimitem e-mail duplicat
     if app_row.status == 'cancelled':
         return {"message": "Programarea era deja anulată."}
 
