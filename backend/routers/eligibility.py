@@ -202,7 +202,7 @@ def submit_appointment_with_answers(
         if account_holder_check.existing_count > 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Această persoană deține un cont în aplicație și este deja programată personal la această campanie!"
+                detail="Această persoană este deja programată personal la această campanie!"
             )
             
     else:

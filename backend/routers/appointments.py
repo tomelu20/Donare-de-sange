@@ -220,11 +220,9 @@ def create_appointment(
     current_user_id = current_user.id 
 
     if appointment_data.is_for_someone_else:
-        # Verificare opțională/obligatorie pentru telefon sau email invitat
         if not appointment_data.guest_phone and not appointment_data.guest_email:
             raise HTTPException(status_code=400, detail="Numărul de telefon sau adresa de email a persoanei programate este obligatorie.")
             
-        # 1. Verificare după telefon (guest_phone)
         if appointment_data.guest_phone:
             guest_check_query = text("""
                 SELECT COUNT(id) AS existing_count 
@@ -244,7 +242,6 @@ def create_appointment(
                     detail=f"Persoana cu numărul de telefon {appointment_data.guest_phone} are deja o programare activă ca invitat în această campanie!"
                 )
 
-        # 2. Verificare după email (guest_email) - NOU ADĂUGAT
         if appointment_data.guest_email:
             guest_email_check_query = text("""
                 SELECT COUNT(id) AS existing_count 
@@ -264,7 +261,6 @@ def create_appointment(
                     detail=f"Persoana cu adresa de email {appointment_data.guest_email} are deja o programare activă ca invitat în această campanie!"
                 )
 
-        # 3. Verificare dacă invitatul este de fapt titularul unui cont care s-a programat personal (după telefon sau email)
         account_holder_check_query = text("""
             SELECT COUNT(a.id) AS existing_count
             FROM appointments a
@@ -287,7 +283,6 @@ def create_appointment(
             )
             
     else:
-        # Cazul în care utilizatorul se programează pe sine
         user_check_query = text("""
             SELECT COUNT(id) AS existing_count 
             FROM appointments 
@@ -311,7 +306,6 @@ def create_appointment(
         user_profile = db.execute(user_profile_query, {"user_id": current_user_id}).fetchone()
         
         if user_profile:
-            # Verificăm dacă utilizatorul a fost înscris deja de altcineva ca invitat (după telefon sau email)
             already_invited_check_query = text("""
                 SELECT COUNT(id) AS existing_count
                 FROM appointments
@@ -480,15 +474,26 @@ def get_my_appointments(
             a.status, 
             a.created_at,
             a.appointment_date,
-            c.title AS campaign_title
+            c.title AS campaign_title,
+            CASE 
+                WHEN a.is_for_someone_else = 1 THEN a.guest_name 
+                ELSE u.name 
+            END AS donor_name,
+            CASE 
+                WHEN a.is_for_someone_else = 1 THEN a.guest_surname 
+                ELSE u.surname 
+            END AS donor_surname
         FROM appointments a
         JOIN campaigns c ON a.campaign_id = c.id
-        WHERE a.user_id = :user_id 
+        JOIN users u ON a.user_id = u.id
+        WHERE (a.user_id = :user_id OR a.guest_email = :user_email)
           AND a.status != 'cancelled'
-          AND a.is_for_someone_else = 0
         ORDER BY a.appointment_date DESC, a.slot_time DESC
     """)
-    result = db.execute(query, {"user_id": current_user.id}).mappings().all()
+    result = db.execute(query, {
+        "user_id": current_user.id,
+        "user_email": current_user.email
+    }).mappings().all()
     return result
 
 @router.get("/all", status_code=status.HTTP_200_OK)

@@ -110,6 +110,8 @@ class AppointmentOut(BaseModel):
     created_at: datetime
     appointment_date: Optional[datetime_date] = None
     campaign_title: Optional[str] = None
+    donor_name: Optional[str] = None     # <--- Adăugat
+    donor_surname: Optional[str] = None  # <--- Adăugat
 
     model_config = {"from_attributes": True}
 

@@ -893,6 +893,11 @@ function Dashboard({ onLogout }) {
                             {app.campaign_title || 'Campanie de Donare'}
                           </h4>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: '#555', marginBottom: '12px' }}>
+                            {/* Afișare nume pe care este rezervarea */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>👤</span> 
+                              <span>Nume: <strong>{app.donor_name} {app.donor_surname}</strong></span>
+                            </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span>📅</span> 
                               <span>Data: <strong>{formatDateRo(app.appointment_date || app.campaign_date || '')}</strong></span>
