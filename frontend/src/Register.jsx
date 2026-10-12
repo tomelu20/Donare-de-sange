@@ -116,7 +116,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
         {
           name: name.trim(),
           surname: surname.trim(),
-          phone: phone.trim(),
+          phone: String(phone).trim(),
           email: email.trim(),
           password: password,
           email_code: emailCode.trim(),
