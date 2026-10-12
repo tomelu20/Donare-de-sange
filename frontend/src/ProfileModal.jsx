@@ -10,14 +10,23 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Filtrăm strict programările care aparțin utilizatorului curent (după nume și prenume)
+  // FILTRARE ULTRA-STRICTĂ: Afișăm strict doar programarea ta (excludem testele pe alte nume precum Valentin sau Daniela)
   const personalAppointments = myAppointments 
     ? myAppointments.filter(app => {
-        const matchesUser = 
+        // Dacă ești administrator, filtrăm strict după numele tău exact (Mihai Toma) și ignorăm restul de test din tabel
+        const isMyExactName = 
+          app.donor_name?.trim().toLowerCase() === 'mihai' && 
+          app.donor_surname?.trim().toLowerCase() === 'toma';
+
+        if (user.role === 'admin' || user.role === 'ADMIN') {
+          return isMyExactName;
+        }
+
+        return (
           (app.donor_name?.toLowerCase() === user.name?.toLowerCase() && 
            app.donor_surname?.toLowerCase() === user.surname?.toLowerCase()) ||
-          (app.user_id && user.id && app.user_id === user.id);
-        return matchesUser;
+          (app.user_id && user.id && app.user_id === user.id)
+        );
       })
     : [];
 
@@ -143,10 +152,10 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
                         <td style={{ padding: '10px' }}>
                           <span style={{
                             padding: '3px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 'bold',
-                            backgroundColor: app.status === 'attended' ? '#d1e7dd' : app.status === 'confirmed' ? '#e3ffe3' : '#fff3cd',
-                            color: app.status === 'attended' ? '#0f5132' : app.status === 'confirmed' ? '#198754' : '#856404'
+                            backgroundColor: app.status === 'attended' ? '#d1e7dd' : app.status === 'confirmed' ? '#e3ffe3' : app.status === 'no_show' ? '#f8d7da' : '#fff3cd',
+                            color: app.status === 'attended' ? '#0f5132' : app.status === 'confirmed' ? '#198754' : app.status === 'no_show' ? '#842029' : '#856404'
                           }}>
-                            {app.status === 'attended' ? 'Prezent ✓ (Donat)' : app.status === 'confirmed' ? 'Confirmată' : app.status}
+                            {app.status === 'attended' ? 'Prezent ✓ (Donat)' : app.status === 'confirmed' ? 'Confirmată' : app.status === 'no_show' ? 'Absent ✗' : app.status}
                           </span>
                         </td>
                       </tr>

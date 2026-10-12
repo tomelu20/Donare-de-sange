@@ -14,7 +14,7 @@ function Dashboard({ onLogout }) {
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   const [campaigns, setCampaigns] = useState([]); 
-  const [myAppointments, setMyAppointments] = useState([]); 
+  const [myAppointmentsRaw, setMyAppointmentsRaw] = useState([]); 
   const [adminAppointments, setAdminAppointments] = useState([]); 
   const [adminWaitlist, setAdminWaitlist] = useState([]); 
   const [topDonors, setTopDonors] = useState([]); 
@@ -84,7 +84,7 @@ function Dashboard({ onLogout }) {
       setEligibilityQuestions(questionsRes.data);
 
       const myAppsRes = await axios.get('http://127.0.0.1:8000/appointments/me');
-      setMyAppointments(myAppsRes.data);
+      setMyAppointmentsRaw(myAppsRes.data);
 
       if (currentUser.role === 'admin' || currentUser.role === 'ADMIN') {
         const adminAppsRes = await axios.get('http://127.0.0.1:8000/appointments/all');
@@ -102,6 +102,24 @@ function Dashboard({ onLogout }) {
       setLoading(false);
     }
   };
+
+  // FILTRARE STRICTĂ A PROGRAMĂRILOR PERSONALE
+  const myAppointments = myAppointmentsRaw.filter(app => {
+    if (!currentUser) return false;
+    if (app.user_id && currentUser.id) {
+      return String(app.user_id) === String(currentUser.id);
+    }
+    if (app.email && currentUser.email) {
+      return app.email.toLowerCase() === currentUser.email.toLowerCase();
+    }
+    if (currentUser.role === 'admin' || currentUser.role === 'ADMIN') {
+      return app.user_id && String(app.user_id) === String(currentUser.id);
+    }
+    return (
+      app.donor_name?.trim().toLowerCase() === currentUser.name?.trim().toLowerCase() && 
+      app.donor_surname?.trim().toLowerCase() === currentUser.surname?.trim().toLowerCase()
+    );
+  });
 
   useEffect(() => {
     fetchData();
@@ -553,7 +571,6 @@ function Dashboard({ onLogout }) {
                           <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
                             <th style={{ padding: '10px 12px', width: '60px' }}>Loc</th>
                             <th style={{ padding: '10px 12px' }}>Donator</th>
-                            <th style={{ padding: '10px 12px' }}>Grupă Sanguină</th>
                             <th style={{ padding: '10px 12px', textAlign: 'center' }}>Total Donări Reale</th>
                           </tr>
                         </thead>
@@ -565,11 +582,6 @@ function Dashboard({ onLogout }) {
                               </td>
                               <td style={{ padding: '10px 12px', fontWeight: 'bold', color: '#2b2d42' }}>
                                 {donor.name} {donor.surname}
-                              </td>
-                              <td style={{ padding: '10px 12px' }}>
-                                <span style={{ backgroundColor: '#fdf0f1', color: '#e63946', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' }}>
-                                  {donor.blood_group}
-                                </span>
                               </td>
                               <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                                 <strong style={{ color: '#2e7d32', backgroundColor: '#e8f5e9', padding: '4px 12px', borderRadius: '12px', border: '1px solid #c8e6c9' }}>
@@ -794,7 +806,7 @@ function Dashboard({ onLogout }) {
                         borderRadius: '6px', 
                         padding: '20px', 
                         display: 'flex', 
-                        justify: 'space-between', 
+                        justifyContent: 'space-between', 
                         alignItems: 'center', 
                         backgroundColor: camp.is_active ? '#fff' : '#f8f9fa',
                         opacity: camp.is_active ? 1 : 0.75
@@ -893,7 +905,6 @@ function Dashboard({ onLogout }) {
                             {app.campaign_title || 'Campanie de Donare'}
                           </h4>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: '#555', marginBottom: '12px' }}>
-                            {/* Afișare nume pe care este rezervarea */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span>👤</span> 
                               <span>Nume: <strong>{app.donor_name} {app.donor_surname}</strong></span>

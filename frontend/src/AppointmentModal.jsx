@@ -14,7 +14,6 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
   const [guestSurname, setGuestSurname] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState(''); 
-  const [guestBloodGroup, setGuestBloodGroup] = useState('Nu știu');
 
   // --- State-uri pentru Formularul de Eligibilitate Dinamic ---
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
@@ -148,7 +147,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
             guest_surname: isForSomeoneElse ? guestSurname : null,
             guest_phone: isForSomeoneElse ? guestPhone : null,
             guest_email: isForSomeoneElse ? guestEmail : null,
-            guest_blood_group: isForSomeoneElse ? guestBloodGroup : "Nu știu"
+            guest_blood_group: "Nu știu"
           },
           answers: Object.keys(checklist).map(qId => ({
             question_id: parseInt(qId, 10),
@@ -225,20 +224,6 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                       <div>
                         <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px', color: '#333' }}>Email Destinatar Reminder:</label>
                         <input type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} required style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }} placeholder="ex: exemplu@mail.com" />
-                      </div>
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px', color: '#333' }}>Grupa Sanguină:</label>
-                        <select value={guestBloodGroup} onChange={(e) => setGuestBloodGroup(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px', backgroundColor: '#fff' }}>
-                          <option value="Nu știu">Nu știu</option>
-                          <option value="0I+">0I (+)</option>
-                          <option value="0I-">0I (-)</option>
-                          <option value="AII+">AII (+)</option>
-                          <option value="AII-">AII (-)</option>
-                          <option value="BIII+">BIII (+)</option>
-                          <option value="BIII-">BIII (-)</option>
-                          <option value="ABIV+">ABIV (+)</option>
-                          <option value="ABIV-">ABIV (-)</option>
-                        </select>
                       </div>
                     </div>
                   )}
