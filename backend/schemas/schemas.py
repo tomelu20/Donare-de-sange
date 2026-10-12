@@ -9,7 +9,7 @@ class UserCreate(BaseModel):
     phone: str
     email: EmailStr
     password: str
-    blood_group: str
+    blood_group: Optional[str] = "Nu știu"
     email_code: str
 
     @field_validator("phone")
@@ -110,8 +110,8 @@ class AppointmentOut(BaseModel):
     created_at: datetime
     appointment_date: Optional[datetime_date] = None
     campaign_title: Optional[str] = None
-    donor_name: Optional[str] = None     # <--- Adăugat
-    donor_surname: Optional[str] = None  # <--- Adăugat
+    donor_name: Optional[str] = None     
+    donor_surname: Optional[str] = None  
 
     model_config = {"from_attributes": True}
 

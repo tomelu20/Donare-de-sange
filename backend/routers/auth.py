@@ -118,6 +118,7 @@ def send_email_via_gmail(to_email: str, code: str, subject_title: str = "Codul t
 @router.post("/send-email-code")
 @limiter.limit("5/minute")
 def send_email_code(request: Request, email: str, db: Session = Depends(get_db)):
+    email = email.strip().lower()
     if not email or "@" not in email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -151,6 +152,7 @@ def send_email_code(request: Request, email: str, db: Session = Depends(get_db))
 @router.post("/verify-email-code")
 @limiter.limit("10/minute")
 def verify_email_code(request: Request, email: str, email_code: str, db: Session = Depends(get_db)):
+    email = email.strip().lower()
     verification_data = db.query(EmailVerificationCode).filter(EmailVerificationCode.email == email).first()
     
     if not verification_data:
@@ -180,7 +182,7 @@ def verify_email_code(request: Request, email: str, email_code: str, db: Session
             detail="Prea multe încercări greșite. Solicită un nou cod."
         )
 
-    if verification_data.code != email_code:
+    if verification_data.code != email_code.strip():
         verification_data.attempts += 1
         db.commit()
         raise HTTPException(
@@ -192,10 +194,10 @@ def verify_email_code(request: Request, email: str, email_code: str, db: Session
     db.commit()
     return {"detail": "Adresa de email a fost verificată cu succes!"}
 
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
-    email = user_data.email
+def register(request: Request, response: Response, user_data: UserCreate, db: Session = Depends(get_db)):
+    email = user_data.email.strip().lower()
     
     verification_data = db.query(EmailVerificationCode).filter(EmailVerificationCode.email == email).first()
     if not verification_data or not verification_data.verified:
@@ -204,7 +206,7 @@ def register(request: Request, user_data: UserCreate, db: Session = Depends(get_
             detail="Trebuie să vă verificați adresa de email înainte de înregistrare."
         )
 
-    if db.query(User).filter(User.email == user_data.email).first():
+    if db.query(User).filter(User.email == email).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Acest email este deja înregistrat."
@@ -219,12 +221,12 @@ def register(request: Request, user_data: UserCreate, db: Session = Depends(get_
     hashed_password = pwd_context.hash(user_data.password)
     
     new_user = User(
-        name=user_data.name,
-        surname=user_data.surname,
-        phone=user_data.phone,
-        email=user_data.email,
+        name=user_data.name.strip(),
+        surname=user_data.surname.strip(),
+        phone=user_data.phone.strip(),
+        email=email,
         password_hash=hashed_password,
-        blood_group=user_data.blood_group
+        blood_group=user_data.blood_group.strip() if user_data.blood_group else "Nu știu"
     )
     
     db.add(new_user)
@@ -233,12 +235,37 @@ def register(request: Request, user_data: UserCreate, db: Session = Depends(get_
     
     db.delete(verification_data)
     db.commit()
-    return new_user
+
+    # Generare token de acces pentru auto-login instant după înregistrare
+    access_token = create_access_token(data={"sub": str(new_user.id)})
+    
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=IS_PRODUCTION,
+        samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": new_user.id,
+            "email": new_user.email,
+            "name": new_user.name,
+            "surname": new_user.surname,
+            "phone": new_user.phone,
+            "blood_group": new_user.blood_group,
+            "role": new_user.role
+        }
+    }
 
 @router.post("/login")
 @limiter.limit("5/minute")
 def login(request: Request, response: Response, user_credentials: UserLogin, db: Session = Depends(get_db)):
-    email = user_credentials.email
+    email = user_credentials.email.strip().lower()
     now = datetime.now(timezone.utc)
     
     lock_info = failed_login_tracker.get(email)
@@ -295,7 +322,7 @@ def logout(response: Response):
     return {"detail": "Deconectare reușită."}
 
 # ==========================================
-# SECȚIUNE NOUĂ: FORGOT / RESET PASSWORD
+# SECȚIUNE: FORGOT / RESET PASSWORD
 # ==========================================
 
 class ForgotPasswordRequest(BaseModel):
@@ -317,8 +344,6 @@ def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Sessio
         )
     
     user = db.query(User).filter(User.email == email).first()
-    # Din motive de securitate, chiar dacă utilizatorul nu există, returnăm un mesaj neutru/de succes
-    # pentru a preveni enumerarea adreselor de email din baza de date.
     if not user:
         return {"detail": "Dacă adresa de email există în sistem, un cod de resetare a fost trimis."}
 
@@ -443,10 +468,10 @@ def update_user_profile(
     current_user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
-    current_user.name = payload.name
-    current_user.surname = payload.surname
-    current_user.phone = payload.phone
-    current_user.blood_group = payload.blood_group
+    current_user.name = payload.name.strip()
+    current_user.surname = payload.surname.strip()
+    current_user.phone = payload.phone.strip()
+    current_user.blood_group = payload.blood_group.strip()
     
     db.commit()
     db.refresh(current_user)

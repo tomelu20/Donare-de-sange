@@ -4,18 +4,16 @@ import axios from 'axios';
 const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://127.0.0.1:8000';
 
 function Login({ onSwitch, onLoginSuccess }) {
-  const [viewMode, setViewMode] = useState('login'); // 'login' sau 'forgot'
+  const [viewMode, setViewMode] = useState('login');
 
-  // State-uri Login
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // State-uri Forgot Password
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotStep, setForgotStep] = useState(1); // 1: Trimite email, 2: Introdu cod și parolă nouă
+  const [forgotStep, setForgotStep] = useState(1);
   const [forgotCode, setForgotCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
@@ -56,7 +54,6 @@ function Login({ onSwitch, onLoginSuccess }) {
     }
   };
 
-  // Trimitere cod resetare parolă
   const handleSendForgotCode = async (e) => {
     e.preventDefault();
     setError('');
@@ -79,7 +76,6 @@ function Login({ onSwitch, onLoginSuccess }) {
     }
   };
 
-  // Trimitere parolă nouă
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError('');
@@ -158,7 +154,6 @@ function Login({ onSwitch, onLoginSuccess }) {
               />
             </div>
 
-            {/* Butonul „Ai uitat parola?” poziționat fix sub câmpul de parolă */}
             <div style={{ textAlign: 'right', marginBottom: '15px' }}>
               <button 
                 type="button" 
@@ -192,7 +187,6 @@ function Login({ onSwitch, onLoginSuccess }) {
           </p>
         </>
       ) : (
-        /* Ecranul de Forgot Password / Resetare */
         <>
           <h2 style={{ textAlign: 'center', color: '#e63946', marginBottom: '10px' }}>Resetare Parolă</h2>
           <p style={{ textAlign: 'center', fontSize: '13px', color: '#666', marginBottom: '20px' }}>

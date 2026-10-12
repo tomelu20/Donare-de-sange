@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-// Compatibilitate sigură cu Vite / Create-React-App
 const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://127.0.0.1:8000';
 
 function Register({ onSwitch, onRegisterSuccess }) {
@@ -23,7 +22,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // 1. Criterii de securitate pentru parolă
   const passwordCriteria = {
     length: password.length >= 8,
     uppercase: /[A-Z]/.test(password),
@@ -32,22 +30,18 @@ function Register({ onSwitch, onRegisterSuccess }) {
   };
   const isPasswordValid = Object.values(passwordCriteria).every(Boolean);
 
-  // 2. Format telefon românesc exact 10 caractere (07XXXXXXXX)
   const isPhoneValid = /^07\d{8}$/.test(phone);
 
-  // Sanitizare Nume / Prenume (doar litere, spațiu și cratimă)
   const handleNameInput = (value, setter) => {
     const lettersOnly = value.replace(/[^a-zA-ZăîâșțĂÎÂȘȚ\s-]/g, '');
     setter(lettersOnly);
   };
 
-  // Sanitizare Telefon (doar cifre, maxim 10)
   const handlePhoneInput = (value) => {
     const numbersOnly = value.replace(/\D/g, '').slice(0, 10);
     setPhone(numbersOnly);
   };
 
-  // Trimiterea codului pe email
   const handleSendEmailCode = async () => {
     setError('');
     setSuccess('');
@@ -68,7 +62,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
     }
   };
 
-  // Verificarea codului OTP
   const handleVerifyCode = async () => {
     setError('');
     setSuccess('');
@@ -91,7 +84,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
     }
   };
 
-  // Creare cont
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
@@ -133,7 +125,13 @@ function Register({ onSwitch, onRegisterSuccess }) {
         { withCredentials: true }
       );
       
-      sessionStorage.setItem('user_session', JSON.stringify(response.data));
+      sessionStorage.setItem('user_session', JSON.stringify(response.data.user));
+      
+      if (response.data.access_token) {
+        sessionStorage.setItem('access_token', response.data.access_token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+      }
+
       setSuccess('Contul a fost creat cu succes! Te redirecționăm direct în aplicație...');
       
       setName('');
@@ -169,8 +167,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
       {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginBottom: '15px' }}>{success}</p>}
 
       <form onSubmit={handleRegister}>
-        
-        {/* 1. NUME DE FAMILIE */}
         <div style={{ marginBottom: '14px' }}>
           <label htmlFor="reg-surname" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Nume (Nume de familie):</label>
           <input 
@@ -185,7 +181,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
           />
         </div>
 
-        {/* 2. PRENUME */}
         <div style={{ marginBottom: '14px' }}>
           <label htmlFor="reg-name" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Prenume:</label>
           <input 
@@ -200,7 +195,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
           />
         </div>
 
-        {/* 3. TELEFON */}
         <div style={{ marginBottom: '14px' }}>
           <label htmlFor="reg-phone" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Telefon:</label>
           <input 
@@ -227,7 +221,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
           )}
         </div>
 
-        {/* 4. EMAIL + BUTON TRIMITE COD */}
         <div style={{ marginBottom: '14px' }}>
           <label htmlFor="reg-email" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Email: (Adresa de email trebuie verificată)</label>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -262,7 +255,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
           </div>
         </div>
 
-        {/* BLOC VERIFICARE COD EMAIL */}
         {isCodeSent && (
           <div style={{ marginBottom: '14px', backgroundColor: isVerified ? '#f0fff0' : '#f9f9f9', padding: '10px', borderRadius: '4px', border: isVerified ? '1px solid green' : '1px dashed #e63946' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: isVerified ? 'green' : '#e63946' }}>
@@ -293,7 +285,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
           </div>
         )}
         
-        {/* 5. PAROLĂ CU GHID VIZUAL */}
         <div style={{ marginBottom: '16px' }}>
           <label htmlFor="reg-password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Parolă:</label>
           <input 
@@ -325,7 +316,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
           </div>
         </div>
 
-        {/* 6. SECȚIUNEA DE TERMENI ȘI CONDIȚII */}
         <div style={{ marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
             <input 
@@ -350,7 +340,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
           </div>
         </div>
 
-        {/* 7. OPȚIUNE NOTIFICĂRI CAMPANII NOI ȘI RESTRICȚII */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
             <input 
@@ -367,7 +356,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
           </div>
         </div>
         
-        {/* BUTON CREARE CONT */}
         <button 
           type="submit" 
           disabled={isLoading} 
@@ -400,7 +388,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
         </button>
       </p>
 
-      {/* MODAL POLITICA DE CONFIDENȚIALITATE */}
       {showTermsModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '550px', width: '100%', maxHeight: '80vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
