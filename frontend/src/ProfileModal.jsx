@@ -5,16 +5,24 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
   const [name, setName] = useState(user.name || '');
   const [surname, setSurname] = useState(user.surname || '');
   const [phone, setPhone] = useState(user.phone || '');
-  const [bloodGroup, setBloodGroup] = useState(user.blood_group || 'Nu știu');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // CALCULĂM NUMĂRUL DE DONĂRI REALE (DOAR PREZENT ✓)
-  const attendedCount = myAppointments 
-    ? myAppointments.filter(app => app.status === 'attended').length 
-    : 0;
+  // Filtrăm strict programările care aparțin utilizatorului curent (după nume și prenume)
+  const personalAppointments = myAppointments 
+    ? myAppointments.filter(app => {
+        const matchesUser = 
+          (app.donor_name?.toLowerCase() === user.name?.toLowerCase() && 
+           app.donor_surname?.toLowerCase() === user.surname?.toLowerCase()) ||
+          (app.user_id && user.id && app.user_id === user.id);
+        return matchesUser;
+      })
+    : [];
+
+  // CALCULĂM NUMĂRUL DE DONĂRI REALE (DOAR PREZENT ✓) din programările personale
+  const attendedCount = personalAppointments.filter(app => app.status === 'attended').length;
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -26,8 +34,7 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
       const response = await axios.put(`http://127.0.0.1:8000/auth/users/${user.id}`, {
         name,
         surname,
-        phone,
-        blood_group: bloodGroup
+        phone
       });
 
       const updatedUserSession = { ...user, ...response.data };
@@ -85,25 +92,9 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Telefon:</label>
-                  <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Grupa Sanguină:</label>
-                  <select value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: 'white', boxSizing: 'border-box' }}>
-                    <option value="Nu știu">Nu știu</option>
-                    <option value="0I+">0I (+)</option>
-                    <option value="0I-">0I (-)</option>
-                    <option value="AII+">AII (+)</option>
-                    <option value="AII-">AII (-)</option>
-                    <option value="BIII+">BIII (+)</option>
-                    <option value="BIII-">BIII (-)</option>
-                    <option value="ABIV+">ABIV (+)</option>
-                    <option value="ABIV-">ABIV (-)</option>
-                  </select>
-                </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Telefon:</label>
+                <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
               </div>
 
               <div style={{ marginBottom: '15px' }}>
@@ -130,8 +121,8 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
               </div>
             </div>
 
-            {!myAppointments || myAppointments.length === 0 ? (
-              <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>Nu aveți nicio donare înregistrată în istoric.</p>
+            {personalAppointments.length === 0 ? (
+              <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>Nu aveți nicio programare proprie înregistrată în istoric.</p>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
@@ -144,7 +135,7 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {myAppointments.map((app) => (
+                    {personalAppointments.map((app) => (
                       <tr key={app.id} style={{ borderBottom: '1px solid #eceeef' }}>
                         <td style={{ padding: '10px', fontWeight: 'bold' }}>{app.campaign_title || 'Campanie Donare'}</td>
                         <td style={{ padding: '10px' }}>{formatDateRo(app.appointment_date || app.campaign_date)}</td>

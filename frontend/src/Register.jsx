@@ -9,6 +9,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [emailCode, setEmailCode] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [notifyCampaigns, setNotifyCampaigns] = useState(false);
@@ -89,6 +90,11 @@ function Register({ onSwitch, onRegisterSuccess }) {
     setError('');
     setSuccess('');
 
+    if (!acceptedTerms) {
+      setError('Trebuie să bifezi Politica de Confidențialitate pentru a putea continua.');
+      return;
+    }
+
     if (!isPhoneValid) {
       setError('Numărul de telefon introdus este incorect sau incomplet. Acesta trebuie să aibă exact 10 cifre și să înceapă cu 07 (ex: 07XXXXXXXX).');
       return;
@@ -101,11 +107,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
     if (!isVerified) {
       setError('Adresa de email nu a fost verificată. Vă rugăm să trimiteți și să introduceți codul de verificare primit pe email.');
-      return;
-    }
-
-    if (!acceptedTerms) {
-      setError('Trebuie să bifați și să acceptați Politica de Confidențialitate pentru a putea crea un cont.');
       return;
     }
 
@@ -287,17 +288,37 @@ function Register({ onSwitch, onRegisterSuccess }) {
         
         <div style={{ marginBottom: '16px' }}>
           <label htmlFor="reg-password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Parolă:</label>
-          <input 
-            id="reg-password"
-            type="password" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            required 
-            autoComplete="new-password"
-            disabled={isLoading}
-            placeholder="••••••••"
-            style={{ width: '100%', padding: '9px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-          />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input 
+              id="reg-password"
+              type={showPassword ? 'text' : 'password'} 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              required 
+              autoComplete="new-password"
+              disabled={isLoading}
+              placeholder="••••••••"
+              style={{ width: '100%', padding: '9px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+            />
+            <button 
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              title={showPassword ? 'Ascunde parola' : 'Arată parola'}
+              style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: '#666' }}
+            >
+              {showPassword ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              )}
+            </button>
+          </div>
 
           <div style={{ marginTop: '8px', fontSize: '12px', backgroundColor: '#f8f9fa', padding: '8px', borderRadius: '4px', border: '1px solid #eee' }}>
             <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', color: '#444' }}>Cerințe parolă:</p>
@@ -322,7 +343,12 @@ function Register({ onSwitch, onRegisterSuccess }) {
               type="checkbox"
               id="terms-checkbox"
               checked={acceptedTerms}
-              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              onChange={(e) => {
+                setAcceptedTerms(e.target.checked);
+                if (e.target.checked && error.includes('Politica de Confidențialitate')) {
+                  setError('');
+                }
+              }}
               disabled={isLoading}
               style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
             />
@@ -388,13 +414,15 @@ function Register({ onSwitch, onRegisterSuccess }) {
         </button>
       </p>
 
+      {/* MODAL TERMENI ȘI CONDIȚII CU SCROLL ACTIV (MOUSE + BARĂ) */}
       {showTermsModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '550px', width: '100%', maxHeight: '80vh', overflowY: 'auto', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
-            <h3 style={{ marginTop: 0, color: '#e63946', textAlign: 'center' }}>Politica de Confidențialitate</h3>
-            <p style={{ fontSize: '12px', color: '#666', textAlign: 'center' }}>Ultima actualizare: Octombrie 2026</p>
+          <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '550px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
             
-            <div style={{ fontSize: '13px', color: '#444', lineHeight: '1.6', textAlign: 'left' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '5px', color: '#e63946', textAlign: 'center' }}>Politica de Confidențialitate</h3>
+            <p style={{ fontSize: '12px', color: '#666', textAlign: 'center', marginTop: 0, marginBottom: '15px' }}>Ultima actualizare: Octombrie 2026</p>
+            
+            <div style={{ fontSize: '13px', color: '#444', lineHeight: '1.6', textAlign: 'left', overflowY: 'auto', paddingRight: '10px', flex: 1, borderTop: '1px solid #eee', borderBottom: '1px solid #eee', paddingBottom: '10px', paddingTop: '10px' }}>
               <p>
                 Prin utilizarea aplicației noastre pentru campaniile de donare de sânge, sunteți de acord cu colectarea și prelucrarea datelor dumneavoastră conform prezentei Politici de Confidențialitate. Ne angajăm să vă protejăm confidențialitatea și să respectăm legislația în vigoare privind protecția datelor (GDPR - Regulamentul UE 2016/679).
               </p>
@@ -405,16 +433,24 @@ function Register({ onSwitch, onRegisterSuccess }) {
               </p>
 
               <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>2. Ce date colectăm și în ce scop</h4>
-              <p style={{ margin: '0 0 5px 0' }}>
-                Colectăm doar datele minime necesare pentru buna desfășurare a campaniilor de donare de sânge organizate în Dumbrăvița și pentru generarea de statistici comunitare.
+              <p style={{ margin: '0 0 10px 0' }}>
+                Colectăm doar datele minime necesare pentru buna desfășurare a campaniilor de donare de sânge organizate în Dumbrăvița și pentru generarea de statistici comunitare, precum și pentru notificarea dumneavoastră privitoare la campanii și restricții.
+              </p>
+
+              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>3. Securitatea datelor</h4>
+              <p style={{ margin: '0 0 10px 0' }}>
+                Toate datele introduse sunt criptate și stocate în condiții de maximă siguranță, accesul fiind permis exclusiv administratorilor autorizați în scopul gestionării donărilor.
               </p>
             </div>
 
-            <div style={{ textAlign: 'center', marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <div style={{ textAlign: 'center', marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center', flexShrink: 0 }}>
               <button 
                 type="button" 
                 onClick={() => {
                   setAcceptedTerms(true);
+                  if (error.includes('Politica de Confidențialitate')) {
+                    setError('');
+                  }
                   setShowTermsModal(false);
                 }} 
                 style={{ backgroundColor: '#2b9348', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
@@ -429,6 +465,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
                 Închide
               </button>
             </div>
+
           </div>
         </div>
       )}
