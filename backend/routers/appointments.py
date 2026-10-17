@@ -220,8 +220,8 @@ def create_appointment(
     current_user_id = current_user.id 
 
     if appointment_data.is_for_someone_else:
-        if not appointment_data.guest_phone and not appointment_data.guest_email:
-            raise HTTPException(status_code=400, detail="Numărul de telefon sau adresa de email a persoanei programate este obligatorie.")
+        if not appointment_data.guest_phone:
+            raise HTTPException(status_code=400, detail="Numărul de telefon al persoanei programate este obligatoriu.")
             
         if appointment_data.guest_phone:
             guest_check_query = text("""
@@ -242,38 +242,18 @@ def create_appointment(
                     detail=f"Persoana cu numărul de telefon {appointment_data.guest_phone} are deja o programare activă ca invitat în această campanie!"
                 )
 
-        if appointment_data.guest_email:
-            guest_email_check_query = text("""
-                SELECT COUNT(id) AS existing_count 
-                FROM appointments 
-                WHERE campaign_id = :camp_id 
-                  AND guest_email = :guest_email 
-                  AND status IN ('confirmed', 'attended')
-            """)
-            guest_email_check = db.execute(guest_email_check_query, {
-                "camp_id": appointment_data.campaign_id,
-                "guest_email": appointment_data.guest_email
-            }).fetchone()
-
-            if guest_email_check.existing_count > 0:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Persoana cu adresa de email {appointment_data.guest_email} are deja o programare activă ca invitat în această campanie!"
-                )
-
         account_holder_check_query = text("""
             SELECT COUNT(a.id) AS existing_count
             FROM appointments a
             JOIN users u ON a.user_id = u.id
             WHERE a.campaign_id = :camp_id
-              AND (u.phone = :guest_phone OR u.email = :guest_email)
+              AND u.phone = :guest_phone
               AND a.is_for_someone_else = 0
               AND a.status IN ('confirmed', 'attended')
         """)
         account_holder_check = db.execute(account_holder_check_query, {
             "camp_id": appointment_data.campaign_id,
-            "guest_phone": appointment_data.guest_phone or "",
-            "guest_email": appointment_data.guest_email or ""
+            "guest_phone": appointment_data.guest_phone or ""
         }).fetchone()
 
         if account_holder_check.existing_count > 0:
@@ -310,14 +290,13 @@ def create_appointment(
                 SELECT COUNT(id) AS existing_count
                 FROM appointments
                 WHERE campaign_id = :camp_id
-                  AND (guest_phone = :user_phone OR guest_email = :user_email)
+                  AND guest_phone = :user_phone
                   AND is_for_someone_else = 1
                   AND status IN ('confirmed', 'attended')
             """)
             already_invited_check = db.execute(already_invited_check_query, {
                 "camp_id": appointment_data.campaign_id,
-                "user_phone": user_profile.phone or "",
-                "user_email": user_profile.email or ""
+                "user_phone": user_profile.phone or ""
             }).fetchone()
 
             if already_invited_check.existing_count > 0:
@@ -357,12 +336,12 @@ def create_appointment(
     insert_query = text("""
         INSERT INTO appointments (
             campaign_id, user_id, slot_time, appointment_date, status, created_at,
-            is_for_someone_else, guest_name, guest_surname, guest_phone, guest_email, guest_blood_group
+            is_for_someone_else, guest_name, guest_surname, guest_phone, guest_blood_group
         )
         OUTPUT INSERTED.id, INSERTED.campaign_id, INSERTED.user_id, INSERTED.slot_time, INSERTED.status, INSERTED.created_at
         VALUES (
             :camp_id, :user_id, :slot_time, :app_date, 'confirmed', GETDATE(),
-            :is_someone_else, :g_name, :g_surname, :g_phone, :g_email, :g_blood
+            :is_someone_else, :g_name, :g_surname, :g_phone, :g_blood
         )
     """)
     
@@ -375,7 +354,6 @@ def create_appointment(
         "g_name": appointment_data.guest_name,
         "g_surname": appointment_data.guest_surname,
         "g_phone": appointment_data.guest_phone,
-        "g_email": appointment_data.guest_email,
         "g_blood": appointment_data.guest_blood_group
     })
     
@@ -400,7 +378,7 @@ def create_appointment(
 @router.put("/{id}/cancel", status_code=status.HTTP_200_OK)
 def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     app_query = text("""
-        SELECT a.campaign_id, a.slot_time, a.appointment_date, a.is_for_someone_else, a.guest_email, a.guest_name, a.guest_surname,
+        SELECT a.campaign_id, a.slot_time, a.appointment_date, a.is_for_someone_else, a.guest_name, a.guest_surname,
                u.email AS user_email, u.name AS user_name, u.surname AS user_surname, c.title AS campaign_title, a.status
         FROM appointments a
         JOIN campaigns c ON a.campaign_id = c.id
@@ -428,7 +406,7 @@ def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session =
     notify_next_in_waitlist(campaign_id, str(slot_time), background_tasks, db)
     db.commit()
 
-    recipient_email = app_row.guest_email if app_row.is_for_someone_else else app_row.user_email
+    recipient_email = app_row.user_email
     donor_fullname = f"{app_row.guest_name} {app_row.guest_surname}" if app_row.is_for_someone_else else f"{app_row.user_name} {app_row.user_surname}"
 
     if recipient_email:
@@ -486,13 +464,13 @@ def get_my_appointments(
         FROM appointments a
         JOIN campaigns c ON a.campaign_id = c.id
         JOIN users u ON a.user_id = u.id
-        WHERE (a.user_id = :user_id OR a.guest_email = :user_email)
+        WHERE (a.user_id = :user_id OR a.guest_phone = :user_phone)
           AND a.status != 'cancelled'
         ORDER BY a.appointment_date DESC, a.slot_time DESC
     """)
     result = db.execute(query, {
         "user_id": current_user.id,
-        "user_email": current_user.email
+        "user_phone": current_user.phone
     }).mappings().all()
     return result
 

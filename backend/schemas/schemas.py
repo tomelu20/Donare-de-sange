@@ -82,14 +82,15 @@ class AppointmentCreate(BaseModel):
     guest_name: Optional[str] = None
     guest_surname: Optional[str] = None
     guest_phone: Optional[str] = None
-    guest_email: Optional[str] = None
     guest_blood_group: Optional[str] = "Nu știu"
 
-    @field_validator("guest_email", mode="before")
+    @field_validator("guest_phone")
     @classmethod
-    def validate_guest_email_empty(cls, v: Optional[str]) -> Optional[str]:
-        if v == "" or (isinstance(v, str) and not v.strip()):
-            return None
+    def validate_guest_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            v = v.strip()
+            if not re.match(r"^07\d{8}$", v):
+                raise ValueError("Numărul de telefon al invitatului trebuie să aibă exact 10 cifre și să înceapă cu 07.")
         return v
 
     @field_validator("guest_phone")
