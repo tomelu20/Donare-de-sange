@@ -8,12 +8,11 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // --- State-uri pentru programarea altei persoane ---
+  // --- State-uri pentru programarea altei persoane (fără email) ---
   const [isForSomeoneElse, setIsForSomeoneElse] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestSurname, setGuestSurname] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
-  const [guestEmail, setGuestEmail] = useState(''); 
 
   // --- State-uri pentru Formularul de Eligibilitate Dinamic ---
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
@@ -127,7 +126,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
       return;
     }
 
-    if (isForSomeoneElse && (!guestName || !guestSurname || !guestPhone || !guestEmail)) {
+    if (isForSomeoneElse && (!guestName || !guestSurname || !guestPhone)) {
       setError('Vă rugăm să completați toate datele persoanei pe care o programați.');
       return;
     }
@@ -146,7 +145,6 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
             guest_name: isForSomeoneElse ? guestName : null,
             guest_surname: isForSomeoneElse ? guestSurname : null,
             guest_phone: isForSomeoneElse ? guestPhone : null,
-            guest_email: isForSomeoneElse ? guestEmail : null,
             guest_blood_group: "Nu știu"
           },
           answers: Object.keys(checklist).map(qId => ({
@@ -194,7 +192,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                 Locație: <strong>{campaign.location_name}</strong> ({campaign.address})
               </p>
 
-              {/* OPȚIUNE PROGRAMEAZĂ PE ALTCINEVA */}
+              {/* OPȚIUNE PROGRAMEAZĂ PE ALTCINEVA (FĂRĂ EMAIL) */}
               {!isAssigningFromWaitlist && (
                 <div style={{ backgroundColor: '#fdf0f1', padding: '12px', borderRadius: '6px', marginBottom: '15px', border: '1px solid #f9dadc' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#e63946', fontSize: '14px' }}>
@@ -208,7 +206,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                   </label>
 
                   {isForSomeoneElse && (
-                    <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px', color: '#333' }}>Nume:</label>
                         <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} required style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }} />
@@ -219,11 +217,7 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px', color: '#333' }}>Telefon:</label>
-                        <input type="text" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} required style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }} />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px', color: '#333' }}>Email Destinatar Reminder:</label>
-                        <input type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} required style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }} placeholder="ex: exemplu@mail.com" />
+                        <input type="text" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} required style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }} placeholder="07XXXXXXXX" />
                       </div>
                     </div>
                   )}
