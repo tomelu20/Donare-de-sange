@@ -239,3 +239,29 @@ def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depend
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Eroare la procesarea asignării: {str(e)}")
+
+@router.get("/me", status_code=status.HTTP_200_OK)
+def get_my_waitlist(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    query = text("""
+        SELECT
+            w.id,
+            w.campaign_id,
+            w.name,
+            w.surname,
+            w.phone,
+            w.email,
+            w.preferred_time_range,
+            w.travel_time_minutes,
+            w.status,
+            c.title AS campaign_title,
+            c.date AS campaign_date
+        FROM waitlist w
+        JOIN campaigns c ON w.campaign_id = c.id
+        WHERE w.user_id = :user_id
+        ORDER BY c.date ASC
+    """)
+    result = db.execute(query, {"user_id": current_user.id}).mappings().all()
+    return result
