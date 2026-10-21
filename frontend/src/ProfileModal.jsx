@@ -10,7 +10,7 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // FILTRARE CORECTĂ ȘI FLEXIBILĂ A PROGRAMĂRILOR PERSONALE
+  // FILTRARE CORECTĂ A TUTUROR PROGRAMĂRILOR DIN ISTORIC (ACTIVE ȘI ÎNCHISE)
   const personalAppointments = myAppointments
       ? myAppointments.filter(app => {
         const appName = (app.donor_name || '').trim().toLowerCase();
@@ -37,7 +37,7 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
       })
       : [];
 
-  // CALCULĂM NUMĂRUL DE DONĂRI REALE (DOAR PREZENT ✓)
+  // CALCULĂM NUMĂRUL DE DONĂRI REALE (DOAR PREZENT ✓) INCLUSIV DIN CAMPANIILE ÎNCHISE
   const attendedCount = personalAppointments.filter(app => app.status === 'attended').length;
 
   const handleSaveProfile = async (e) => {
@@ -91,7 +91,7 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
             {error && <div style={{ backgroundColor: '#ffe3e3', color: '#dc3545', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '13px' }}>❌ {error}</div>}
             {success && <div style={{ backgroundColor: '#e3ffe3', color: '#198754', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '13px', fontWeight: 'bold' }}>✔️ {success}</div>}
 
-            {/* SECȚIUNE 1: Date Personale */}
+            {/* SECȚIUNEA 1: Date Personale */}
             <section style={{ marginBottom: '25px' }}>
               <h4 style={{ margin: '0 0 15px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px' }}>
                 📝 Date Personale
@@ -124,7 +124,7 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
               </form>
             </section>
 
-            {/* SECȚIUNE 2: Istoric Donări & Numărător */}
+            {/* SECȚIUNEA 2: Istoric Donări & Numărător */}
             <section>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', marginBottom: '15px' }}>
                 <h4 style={{ margin: 0, color: '#2b2d42' }}>

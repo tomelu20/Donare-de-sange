@@ -111,13 +111,12 @@ function Dashboard({ onLogout }) {
     }
   };
 
-  // Seturi de ID-uri pentru campaniile active (folosite pentru a ascunde programările din campanii finalizate)
+  // Seturi de ID-uri pentru campaniile active (folosite pentru a ascunde programările din campanii finalizate din dashboard)
   const activeCampaignIds = new Set(campaigns.filter(c => c.is_active).map(c => c.id));
   const activeCampaignTitles = new Set(campaigns.filter(c => c.is_active).map(c => c.title));
 
-  // FILTRARE PROGRAMĂRI PERSONALE (DOAR PENTRU CAMPANII ACTIVE)
+  // FILTRARE PROGRAMĂRI PERSONALE PENTRU DASHBOARD (DOAR PENTRU CAMPANII ACTIVE)
   const myAppointments = myAppointmentsRaw.filter(app => {
-    // Verificăm dacă campania este activă după ID sau Titlu
     const isCampaignActive =
         (app.campaign_id && activeCampaignIds.has(app.campaign_id)) ||
         (app.campaign_title && activeCampaignTitles.has(app.campaign_title));
@@ -1136,7 +1135,7 @@ function Dashboard({ onLogout }) {
         {showProfileModal && (
             <ProfileModal
                 user={currentUser}
-                myAppointments={myAppointments}
+                myAppointments={myAppointmentsRaw} // <-- Trimitem datele COMPLETE (inclusiv din campanii închise)
                 onClose={() => setShowProfileModal(false)}
                 onUserUpdated={(updatedUser) => setCurrentUser(updatedUser)}
             />
