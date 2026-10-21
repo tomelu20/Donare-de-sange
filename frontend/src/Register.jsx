@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { GoogleLogin } from '@react-oauth/google';
 
 const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://127.0.0.1:8000';
 
@@ -43,6 +44,33 @@ function Register({ onSwitch, onRegisterSuccess }) {
     setPhone(numbersOnly);
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError('');
+    setIsLoading(true);
+    try {
+      const response = await axios.post(
+          `${API_BASE_URL}/auth/google-login`,
+          { credential: credentialResponse.credential },
+          { withCredentials: true }
+      );
+
+      sessionStorage.setItem('user_session', JSON.stringify(response.data.user));
+
+      if (response.data.access_token) {
+        sessionStorage.setItem('access_token', response.data.access_token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+      }
+
+      if (onRegisterSuccess) {
+        onRegisterSuccess();
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Eroare la înregistrarea cu Google.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendEmailCode = async () => {
     setError('');
     setSuccess('');
@@ -74,7 +102,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
     setIsVerifyingCode(true);
     try {
       await axios.post(
-        `${API_BASE_URL}/auth/verify-email-code?email=${encodeURIComponent(email.trim())}&email_code=${encodeURIComponent(emailCode.trim())}`
+          `${API_BASE_URL}/auth/verify-email-code?email=${encodeURIComponent(email.trim())}&email_code=${encodeURIComponent(emailCode.trim())}`
       );
       setIsVerified(true);
       setSuccess('Email verificat cu succes! Puteți continua completarea formularului.');
@@ -113,28 +141,28 @@ function Register({ onSwitch, onRegisterSuccess }) {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/auth/register`,
-        {
-          name: name.trim(),
-          surname: surname.trim(),
-          phone: String(phone).trim(),
-          email: email.trim(),
-          password: password,
-          email_code: emailCode.trim(),
-          notify_campaigns: notifyCampaigns
-        },
-        { withCredentials: true }
+          `${API_BASE_URL}/auth/register`,
+          {
+            name: name.trim(),
+            surname: surname.trim(),
+            phone: String(phone).trim(),
+            email: email.trim(),
+            password: password,
+            email_code: emailCode.trim(),
+            notify_campaigns: notifyCampaigns
+          },
+          { withCredentials: true }
       );
-      
+
       sessionStorage.setItem('user_session', JSON.stringify(response.data.user));
-      
+
       if (response.data.access_token) {
         sessionStorage.setItem('access_token', response.data.access_token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
       }
 
       setSuccess('Contul a fost creat cu succes! Te redirecționăm direct în aplicație...');
-      
+
       setName('');
       setSurname('');
       setPhone('');
@@ -162,314 +190,332 @@ function Register({ onSwitch, onRegisterSuccess }) {
   };
 
   return (
-    <div style={{ maxWidth: '420px', margin: '40px auto', padding: '24px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'sans-serif', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-      <h2 style={{ textAlign: 'center', color: '#e63946', marginBottom: '20px' }}>Înregistrare Cont Nou</h2>
+      <div style={{ maxWidth: '420px', margin: '40px auto', padding: '24px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'sans-serif', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+        <h2 style={{ textAlign: 'center', color: '#e63946', marginBottom: '20px' }}>Înregistrare Cont Nou</h2>
 
-      {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginBottom: '15px' }}>{success}</p>}
+        {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginBottom: '15px' }}>{success}</p>}
 
-      <form onSubmit={handleRegister}>
-        <div style={{ marginBottom: '14px' }}>
-          <label htmlFor="reg-surname" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Nume (Nume de familie):</label>
-          <input 
-            id="reg-surname"
-            type="text" 
-            value={surname} 
-            onChange={(e) => handleNameInput(e.target.value, setSurname)} 
-            required 
-            placeholder="ex: Popescu"
-            disabled={isLoading}
-            style={{ width: '100%', padding: '9px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+        {/* BUTONUL GOOGLE */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px', marginTop: '10px' }}>
+          <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Înregistrarea cu Google a eșuat.')}
+              useOneTap
+              theme="outline"
+              shape="rectangular"
+              text="signup_with"
+              locale="ro"
           />
         </div>
 
-        <div style={{ marginBottom: '14px' }}>
-          <label htmlFor="reg-name" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Prenume:</label>
-          <input 
-            id="reg-name"
-            type="text" 
-            value={name} 
-            onChange={(e) => handleNameInput(e.target.value, setName)} 
-            required 
-            placeholder="ex: Andrei"
-            disabled={isLoading}
-            style={{ width: '100%', padding: '9px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#aaa', margin: '15px 0' }}>
+          <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
+          <span style={{ padding: '0 10px', fontSize: '13px' }}>sau cu email</span>
+          <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
         </div>
 
-        <div style={{ marginBottom: '14px' }}>
-          <label htmlFor="reg-phone" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Telefon:</label>
-          <input 
-            id="reg-phone"
-            type="tel" 
-            value={phone} 
-            onChange={(e) => handlePhoneInput(e.target.value)} 
-            required 
-            maxLength={10}
-            placeholder="07XXXXXXXX"
-            disabled={isLoading}
-            style={{ 
-              width: '100%', 
-              padding: '9px', 
-              borderRadius: '4px', 
-              border: `1px solid ${phone && !isPhoneValid ? '#e63946' : '#ccc'}`, 
-              boxSizing: 'border-box' 
-            }}
-          />
-          {phone && !isPhoneValid && (
-            <span style={{ fontSize: '12px', color: '#e63946', marginTop: '3px', display: 'block' }}>
+        <form onSubmit={handleRegister}>
+          <div style={{ marginBottom: '14px' }}>
+            <label htmlFor="reg-surname" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Nume (Nume de familie):</label>
+            <input
+                id="reg-surname"
+                type="text"
+                value={surname}
+                onChange={(e) => handleNameInput(e.target.value, setSurname)}
+                required
+                placeholder="ex: Popescu"
+                disabled={isLoading}
+                style={{ width: '100%', padding: '9px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '14px' }}>
+            <label htmlFor="reg-name" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Prenume:</label>
+            <input
+                id="reg-name"
+                type="text"
+                value={name}
+                onChange={(e) => handleNameInput(e.target.value, setName)}
+                required
+                placeholder="ex: Andrei"
+                disabled={isLoading}
+                style={{ width: '100%', padding: '9px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '14px' }}>
+            <label htmlFor="reg-phone" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Telefon:</label>
+            <input
+                id="reg-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => handlePhoneInput(e.target.value)}
+                required
+                maxLength={10}
+                placeholder="07XXXXXXXX"
+                disabled={isLoading}
+                style={{
+                  width: '100%',
+                  padding: '9px',
+                  borderRadius: '4px',
+                  border: `1px solid ${phone && !isPhoneValid ? '#e63946' : '#ccc'}`,
+                  boxSizing: 'border-box'
+                }}
+            />
+            {phone && !isPhoneValid && (
+                <span style={{ fontSize: '12px', color: '#e63946', marginTop: '3px', display: 'block' }}>
               Format invalid. Trebuie să aibă exact 10 cifre și să înceapă cu 07 ({phone.length}/10).
             </span>
-          )}
-        </div>
-
-        <div style={{ marginBottom: '14px' }}>
-          <label htmlFor="reg-email" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Email: (Adresa de email trebuie verificată)</label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input 
-              id="reg-email"
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              required 
-              disabled={isVerified || isLoading} 
-              placeholder="nume@gmail.com"
-              style={{ flex: 1, padding: '9px', borderRadius: '4px', border: isVerified ? '2px solid green' : '1px solid #ccc', boxSizing: 'border-box', backgroundColor: isVerified ? '#f0fff0' : 'white' }}
-            />
-            <button 
-              type="button" 
-              onClick={handleSendEmailCode} 
-              disabled={isVerified || isSendingCode || isLoading}
-              style={{ 
-                padding: '9px 14px', 
-                backgroundColor: isVerified ? '#999' : '#333', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '4px', 
-                cursor: (isVerified || isSendingCode) ? 'default' : 'pointer', 
-                fontSize: '13px', 
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {isVerified ? 'Verificat ✓' : isSendingCode ? 'Se trimite...' : isCodeSent ? 'Retrimite' : 'Trimite cod'}
-            </button>
+            )}
           </div>
-        </div>
 
-        {isCodeSent && (
-          <div style={{ marginBottom: '14px', backgroundColor: isVerified ? '#f0fff0' : '#f9f9f9', padding: '10px', borderRadius: '4px', border: isVerified ? '1px solid green' : '1px dashed #e63946' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: isVerified ? 'green' : '#e63946' }}>
-              {isVerified ? '✓ Email Verificat' : 'Cod Verificare Email (6 cifre):'}
-            </label>
+          <div style={{ marginBottom: '14px' }}>
+            <label htmlFor="reg-email" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Email: (Adresa de email trebuie verificată)</label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <input 
-                type="text" 
-                maxLength={6}
-                value={emailCode} 
-                onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ''))} 
-                required 
-                disabled={isVerified || isLoading}
-                placeholder="123456"
-                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '4px', fontWeight: 'bold' }}
+              <input
+                  id="reg-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isVerified || isLoading}
+                  placeholder="nume@gmail.com"
+                  style={{ flex: 1, padding: '9px', borderRadius: '4px', border: isVerified ? '2px solid green' : '1px solid #ccc', boxSizing: 'border-box', backgroundColor: isVerified ? '#f0fff0' : 'white' }}
               />
-              {!isVerified && (
-                <button 
-                  type="button" 
-                  onClick={handleVerifyCode} 
-                  disabled={isVerifyingCode || isLoading}
-                  style={{ padding: '8px 14px', backgroundColor: '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: isVerifyingCode ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+              <button
+                  type="button"
+                  onClick={handleSendEmailCode}
+                  disabled={isVerified || isSendingCode || isLoading}
+                  style={{
+                    padding: '9px 14px',
+                    backgroundColor: isVerified ? '#999' : '#333',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: (isVerified || isSendingCode) ? 'default' : 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    whiteSpace: 'nowrap'
+                  }}
+              >
+                {isVerified ? 'Verificat ✓' : isSendingCode ? 'Se trimite...' : isCodeSent ? 'Retrimite' : 'Trimite cod'}
+              </button>
+            </div>
+          </div>
+
+          {isCodeSent && (
+              <div style={{ marginBottom: '14px', backgroundColor: isVerified ? '#f0fff0' : '#f9f9f9', padding: '10px', borderRadius: '4px', border: isVerified ? '1px solid green' : '1px dashed #e63946' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: isVerified ? 'green' : '#e63946' }}>
+                  {isVerified ? '✓ Email Verificat' : 'Cod Verificare Email (6 cifre):'}
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                      type="text"
+                      maxLength={6}
+                      value={emailCode}
+                      onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ''))}
+                      required
+                      disabled={isVerified || isLoading}
+                      placeholder="123456"
+                      style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '4px', fontWeight: 'bold' }}
+                  />
+                  {!isVerified && (
+                      <button
+                          type="button"
+                          onClick={handleVerifyCode}
+                          disabled={isVerifyingCode || isLoading}
+                          style={{ padding: '8px 14px', backgroundColor: '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: isVerifyingCode ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                      >
+                        {isVerifyingCode ? 'Se verifică...' : 'Verifică'}
+                      </button>
+                  )}
+                </div>
+              </div>
+          )}
+
+          <div style={{ marginBottom: '16px' }}>
+            <label htmlFor="reg-password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Parolă:</label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                  id="reg-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                  placeholder="••••••••"
+                  style={{ width: '100%', padding: '9px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+              />
+              <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  title={showPassword ? 'Ascunde parola' : 'Arată parola'}
+                  style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: '#666' }}
+              >
+                {showPassword ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                )}
+              </button>
+            </div>
+
+            <div style={{ marginTop: '8px', fontSize: '12px', backgroundColor: '#f8f9fa', padding: '8px', borderRadius: '4px', border: '1px solid #eee' }}>
+              <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', color: '#444' }}>Cerințe parolă:</p>
+              <div style={{ color: passwordCriteria.length ? '#2b9348' : '#888' }}>
+                {passwordCriteria.length ? '✓' : '•'} Minim 8 caractere
+              </div>
+              <div style={{ color: passwordCriteria.uppercase ? '#2b9348' : '#888' }}>
+                {passwordCriteria.uppercase ? '✓' : '•'} Cel puțin o majusculă (A-Z)
+              </div>
+              <div style={{ color: passwordCriteria.number ? '#2b9348' : '#888' }}>
+                {passwordCriteria.number ? '✓' : '•'} Cel puțin o cifră (0-9)
+              </div>
+              <div style={{ color: passwordCriteria.special ? '#2b9348' : '#888' }}>
+                {passwordCriteria.special ? '✓' : '•'} Cel puțin un caracter special (!@#$%^&* etc.)
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <input
+                  type="checkbox"
+                  id="terms-checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => {
+                    setAcceptedTerms(e.target.checked);
+                    if (e.target.checked && error.includes('Politica de Confidențialitate')) {
+                      setError('');
+                    }
+                  }}
+                  disabled={isLoading}
+                  style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
+              />
+              <label htmlFor="terms-checkbox" style={{ fontSize: '13px', color: '#333', lineHeight: '1.4', cursor: 'pointer' }}>
+                Am citit și sunt de acord cu{' '}
+                <button
+                    type="button"
+                    onClick={() => setShowTermsModal(true)}
+                    style={{ background: 'none', border: 'none', color: '#e63946', textDecoration: 'underline', padding: 0, font: 'inherit', cursor: 'pointer' }}
                 >
-                  {isVerifyingCode ? 'Se verifică...' : 'Verifică'}
-                </button>
-              )}
+                  Politica de Confidențialitate
+                </button>{' '}
+                și prelucrarea datelor cu caracter personal.*
+              </label>
             </div>
           </div>
-        )}
-        
-        <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="reg-password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Parolă:</label>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <input 
-              id="reg-password"
-              type={showPassword ? 'text' : 'password'} 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              required 
-              autoComplete="new-password"
+
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <input
+                  type="checkbox"
+                  id="notify-checkbox"
+                  checked={notifyCampaigns}
+                  onChange={(e) => setNotifyCampaigns(e.target.checked)}
+                  disabled={isLoading}
+                  style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
+              />
+              <label htmlFor="notify-checkbox" style={{ fontSize: '13px', color: '#333', lineHeight: '1.4', cursor: 'pointer' }}>
+                doresc sa fiu informat pe mail cand se deschid campanii noi, cand apar restrictii de donare legate de unde am calatorit etc
+              </label>
+            </div>
+          </div>
+
+          <button
+              type="submit"
               disabled={isLoading}
-              placeholder="••••••••"
-              style={{ width: '100%', padding: '9px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-            />
-            <button 
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              title={showPassword ? 'Ascunde parola' : 'Arată parola'}
-              style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: '#666' }}
-            >
-              {showPassword ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                  <line x1="1" y1="1" x2="23" y2="23"></line>
-                </svg>
-              )}
-            </button>
-          </div>
-
-          <div style={{ marginTop: '8px', fontSize: '12px', backgroundColor: '#f8f9fa', padding: '8px', borderRadius: '4px', border: '1px solid #eee' }}>
-            <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', color: '#444' }}>Cerințe parolă:</p>
-            <div style={{ color: passwordCriteria.length ? '#2b9348' : '#888' }}>
-              {passwordCriteria.length ? '✓' : '•'} Minim 8 caractere
-            </div>
-            <div style={{ color: passwordCriteria.uppercase ? '#2b9348' : '#888' }}>
-              {passwordCriteria.uppercase ? '✓' : '•'} Cel puțin o majusculă (A-Z)
-            </div>
-            <div style={{ color: passwordCriteria.number ? '#2b9348' : '#888' }}>
-              {passwordCriteria.number ? '✓' : '•'} Cel puțin o cifră (0-9)
-            </div>
-            <div style={{ color: passwordCriteria.special ? '#2b9348' : '#888' }}>
-              {passwordCriteria.special ? '✓' : '•'} Cel puțin un caracter special (!@#$%^&* etc.)
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-            <input 
-              type="checkbox"
-              id="terms-checkbox"
-              checked={acceptedTerms}
-              onChange={(e) => {
-                setAcceptedTerms(e.target.checked);
-                if (e.target.checked && error.includes('Politica de Confidențialitate')) {
-                  setError('');
-                }
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: isLoading ? '#ccc' : '#e63946',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                fontWeight: 'bold'
               }}
-              disabled={isLoading}
-              style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
-            />
-            <label htmlFor="terms-checkbox" style={{ fontSize: '13px', color: '#333', lineHeight: '1.4', cursor: 'pointer' }}>
-              Am citit și sunt de acord cu{' '}
-              <button 
-                type="button" 
-                onClick={() => setShowTermsModal(true)} 
-                style={{ background: 'none', border: 'none', color: '#e63946', textDecoration: 'underline', padding: 0, font: 'inherit', cursor: 'pointer' }}
-              >
-                Politica de Confidențialitate
-              </button>{' '}
-              și prelucrarea datelor cu caracter personal.*
-            </label>
-          </div>
-        </div>
+          >
+            {isLoading ? 'Se creează contul...' : 'Creează cont'}
+          </button>
 
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-            <input 
-              type="checkbox"
-              id="notify-checkbox"
-              checked={notifyCampaigns}
-              onChange={(e) => setNotifyCampaigns(e.target.checked)}
-              disabled={isLoading}
-              style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
-            />
-            <label htmlFor="notify-checkbox" style={{ fontSize: '13px', color: '#333', lineHeight: '1.4', cursor: 'pointer' }}>
-              doresc sa fiu informat pe mail cand se deschid campanii noi, cand apar restrictii de donare legate de unde am calatorit etc
-            </label>
-          </div>
-        </div>
-        
-        <button 
-          type="submit" 
-          disabled={isLoading} 
-          style={{ 
-            width: '100%', 
-            padding: '12px', 
-            backgroundColor: isLoading ? '#ccc' : '#e63946', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px', 
-            cursor: isLoading ? 'not-allowed' : 'pointer', 
-            fontSize: '16px', 
-            fontWeight: 'bold'
-          }}
-        >
-          {isLoading ? 'Se creează contul...' : 'Creează cont'}
-        </button>
+          {error && (
+              <div style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginTop: '12px', textAlign: 'center', border: '1px solid #f5c6cb' }}>
+                {error}
+              </div>
+          )}
+        </form>
 
-        {error && (
-          <div style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginTop: '12px', textAlign: 'center', border: '1px solid #f5c6cb' }}>
-            {error}
-          </div>
+        <p style={{ textAlign: 'center', marginTop: '15px', fontSize: '14px' }}>
+          Ai deja un cont?{' '}
+          <button type="button" onClick={onSwitch} style={{ background: 'none', border: 'none', color: '#e63946', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'bold' }}>
+            Conectează-te aici
+          </button>
+        </p>
+
+        {showTermsModal && (
+            <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
+              <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '550px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+
+                <h3 style={{ marginTop: 0, marginBottom: '5px', color: '#e63946', textAlign: 'center' }}>Politica de Confidențialitate</h3>
+                <p style={{ fontSize: '12px', color: '#666', textAlign: 'center', marginTop: 0, marginBottom: '15px' }}>Ultima actualizare: Octombrie 2026</p>
+
+                <div style={{ fontSize: '13px', color: '#444', lineHeight: '1.6', textAlign: 'left', overflowY: 'auto', paddingRight: '10px', flex: 1, borderTop: '1px solid #eee', borderBottom: '1px solid #eee', paddingBottom: '10px', paddingTop: '10px' }}>
+                  <p>
+                    Prin utilizarea aplicației noastre pentru campaniile de donare de sânge, sunteți de acord cu colectarea și prelucrarea datelor dumneavoastră conform prezentei Politici de Confidențialitate. Ne angajăm să vă protejăm confidențialitatea și să respectăm legislația în vigoare privind protecția datelor (GDPR - Regulamentul UE 2016/679).
+                  </p>
+
+                  <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>1. Cine colectează datele dumneavoastră</h4>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    Datele sunt colectate și procesate de către echipa de organizare a campaniei comunitare „Dumbrăvița Salvează Vieți”, desfășurată în parteneriat cu Centrul Regional de Transfuzie Sanguină Timișoara.
+                  </p>
+
+                  <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>2. Ce date colectăm și în ce scop</h4>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    Colectăm doar datele minime necesare pentru buna desfășurare a campaniilor de donare de sânge organizate în Dumbrăvița și pentru generarea de statistici comunitare, precum și pentru notificarea dumneavoastră privitoare la campanii și restricții.
+                  </p>
+
+                  <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>3. Securitatea datelor</h4>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    Toate datele introduse sunt criptate și stocate în condiții de maximă siguranță, accesul fiind permis exclusiv administratorilor autorizați în scopul gestionării donărilor.
+                  </p>
+                </div>
+
+                <div style={{ textAlign: 'center', marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center', flexShrink: 0 }}>
+                  <button
+                      type="button"
+                      onClick={() => {
+                        setAcceptedTerms(true);
+                        if (error.includes('Politica de Confidențialitate')) {
+                          setError('');
+                        }
+                        setShowTermsModal(false);
+                      }}
+                      style={{ backgroundColor: '#2b9348', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    Accept și închid
+                  </button>
+                  <button
+                      type="button"
+                      onClick={() => setShowTermsModal(false)}
+                      style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    Închide
+                  </button>
+                </div>
+
+              </div>
+            </div>
         )}
-      </form>
-
-      <p style={{ textAlign: 'center', marginTop: '15px', fontSize: '14px' }}>
-        Ai deja un cont?{' '}
-        <button type="button" onClick={onSwitch} style={{ background: 'none', border: 'none', color: '#e63946', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'bold' }}>
-          Conectează-te aici
-        </button>
-      </p>
-
-      {/* MODAL TERMENI ȘI CONDIȚII CU SCROLL ACTIV (MOUSE + BARĂ) */}
-      {showTermsModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '550px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
-            
-            <h3 style={{ marginTop: 0, marginBottom: '5px', color: '#e63946', textAlign: 'center' }}>Politica de Confidențialitate</h3>
-            <p style={{ fontSize: '12px', color: '#666', textAlign: 'center', marginTop: 0, marginBottom: '15px' }}>Ultima actualizare: Octombrie 2026</p>
-            
-            <div style={{ fontSize: '13px', color: '#444', lineHeight: '1.6', textAlign: 'left', overflowY: 'auto', paddingRight: '10px', flex: 1, borderTop: '1px solid #eee', borderBottom: '1px solid #eee', paddingBottom: '10px', paddingTop: '10px' }}>
-              <p>
-                Prin utilizarea aplicației noastre pentru campaniile de donare de sânge, sunteți de acord cu colectarea și prelucrarea datelor dumneavoastră conform prezentei Politici de Confidențialitate. Ne angajăm să vă protejăm confidențialitatea și să respectăm legislația în vigoare privind protecția datelor (GDPR - Regulamentul UE 2016/679).
-              </p>
-              
-              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>1. Cine colectează datele dumneavoastră</h4>
-              <p style={{ margin: '0 0 10px 0' }}>
-                Datele sunt colectate și procesate de către echipa de organizare a campaniei comunitare „Dumbrăvița Salvează Vieți”, desfășurată în parteneriat cu Centrul Regional de Transfuzie Sanguină Timișoara.
-              </p>
-
-              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>2. Ce date colectăm și în ce scop</h4>
-              <p style={{ margin: '0 0 10px 0' }}>
-                Colectăm doar datele minime necesare pentru buna desfășurare a campaniilor de donare de sânge organizate în Dumbrăvița și pentru generarea de statistici comunitare, precum și pentru notificarea dumneavoastră privitoare la campanii și restricții.
-              </p>
-
-              <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>3. Securitatea datelor</h4>
-              <p style={{ margin: '0 0 10px 0' }}>
-                Toate datele introduse sunt criptate și stocate în condiții de maximă siguranță, accesul fiind permis exclusiv administratorilor autorizați în scopul gestionării donărilor.
-              </p>
-            </div>
-
-            <div style={{ textAlign: 'center', marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center', flexShrink: 0 }}>
-              <button 
-                type="button" 
-                onClick={() => {
-                  setAcceptedTerms(true);
-                  if (error.includes('Politica de Confidențialitate')) {
-                    setError('');
-                  }
-                  setShowTermsModal(false);
-                }} 
-                style={{ backgroundColor: '#2b9348', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Accept și închid
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setShowTermsModal(false)} 
-                style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Închide
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
   );
 }
 
