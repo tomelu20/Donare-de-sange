@@ -161,7 +161,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
       }
 
-      setSuccess('Contul a fost creat cu succes! Te redirecționăm direct în aplicație...');
+      setSuccess('Contul a fost creat cu succes! Te redirecționăm...');
 
       setName('');
       setSurname('');
@@ -190,13 +190,12 @@ function Register({ onSwitch, onRegisterSuccess }) {
   };
 
   return (
-      <div style={{ maxWidth: '420px', margin: '40px auto', padding: '24px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'sans-serif', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-        <h2 style={{ textAlign: 'center', color: '#e63946', marginBottom: '20px' }}>Înregistrare Cont Nou</h2>
+      <div style={{ maxWidth: '420px', width: '90%', margin: '20px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'sans-serif', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', boxSizing: 'border-box' }}>
+        <h2 style={{ textAlign: 'center', color: '#e63946', marginBottom: '15px', fontSize: '18px' }}>Înregistrare Cont Nou</h2>
 
-        {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginBottom: '15px' }}>{success}</p>}
+        {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '8px', borderRadius: '4px', fontSize: '12px', marginBottom: '12px' }}>{success}</p>}
 
-        {/* BUTONUL GOOGLE */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px', marginTop: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px', marginTop: '8px', width: '100%', overflow: 'hidden' }}>
           <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={() => setError('Înregistrarea cu Google a eșuat.')}
@@ -208,15 +207,15 @@ function Register({ onSwitch, onRegisterSuccess }) {
           />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#aaa', margin: '15px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#aaa', margin: '12px 0' }}>
           <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
-          <span style={{ padding: '0 10px', fontSize: '13px' }}>sau cu email</span>
+          <span style={{ padding: '0 10px', fontSize: '12px' }}>sau cu email</span>
           <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
         </div>
 
         <form onSubmit={handleRegister}>
-          <div style={{ marginBottom: '14px' }}>
-            <label htmlFor="reg-surname" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Nume (Nume de familie):</label>
+          <div style={{ marginBottom: '12px' }}>
+            <label htmlFor="reg-surname" style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Nume (Nume de familie):</label>
             <input
                 id="reg-surname"
                 type="text"
@@ -225,12 +224,12 @@ function Register({ onSwitch, onRegisterSuccess }) {
                 required
                 placeholder="ex: Popescu"
                 disabled={isLoading}
-                style={{ width: '100%', padding: '9px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }}
             />
           </div>
 
-          <div style={{ marginBottom: '14px' }}>
-            <label htmlFor="reg-name" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Prenume:</label>
+          <div style={{ marginBottom: '12px' }}>
+            <label htmlFor="reg-name" style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Prenume:</label>
             <input
                 id="reg-name"
                 type="text"
@@ -239,12 +238,12 @@ function Register({ onSwitch, onRegisterSuccess }) {
                 required
                 placeholder="ex: Andrei"
                 disabled={isLoading}
-                style={{ width: '100%', padding: '9px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }}
             />
           </div>
 
-          <div style={{ marginBottom: '14px' }}>
-            <label htmlFor="reg-phone" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Telefon:</label>
+          <div style={{ marginBottom: '12px' }}>
+            <label htmlFor="reg-phone" style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Telefon:</label>
             <input
                 id="reg-phone"
                 type="tel"
@@ -256,22 +255,23 @@ function Register({ onSwitch, onRegisterSuccess }) {
                 disabled={isLoading}
                 style={{
                   width: '100%',
-                  padding: '9px',
+                  padding: '8px',
                   borderRadius: '4px',
                   border: `1px solid ${phone && !isPhoneValid ? '#e63946' : '#ccc'}`,
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  fontSize: '13px'
                 }}
             />
             {phone && !isPhoneValid && (
-                <span style={{ fontSize: '12px', color: '#e63946', marginTop: '3px', display: 'block' }}>
-              Format invalid. Trebuie să aibă exact 10 cifre și să înceapă cu 07 ({phone.length}/10).
+                <span style={{ fontSize: '11px', color: '#e63946', marginTop: '2px', display: 'block' }}>
+              Format invalid. 10 cifre, începând cu 07 ({phone.length}/10).
             </span>
             )}
           </div>
 
-          <div style={{ marginBottom: '14px' }}>
-            <label htmlFor="reg-email" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Email: (Adresa de email trebuie verificată)</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ marginBottom: '12px' }}>
+            <label htmlFor="reg-email" style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Email (necesită verificare):</label>
+            <div style={{ display: 'flex', gap: '6px' }}>
               <input
                   id="reg-email"
                   type="email"
@@ -280,35 +280,36 @@ function Register({ onSwitch, onRegisterSuccess }) {
                   required
                   disabled={isVerified || isLoading}
                   placeholder="nume@gmail.com"
-                  style={{ flex: 1, padding: '9px', borderRadius: '4px', border: isVerified ? '2px solid green' : '1px solid #ccc', boxSizing: 'border-box', backgroundColor: isVerified ? '#f0fff0' : 'white' }}
+                  style={{ flex: 1, padding: '8px', borderRadius: '4px', border: isVerified ? '2px solid green' : '1px solid #ccc', boxSizing: 'border-box', backgroundColor: isVerified ? '#f0fff0' : 'white', fontSize: '13px', minWidth: 0 }}
               />
               <button
                   type="button"
                   onClick={handleSendEmailCode}
                   disabled={isVerified || isSendingCode || isLoading}
                   style={{
-                    padding: '9px 14px',
+                    padding: '8px 10px',
                     backgroundColor: isVerified ? '#999' : '#333',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
                     cursor: (isVerified || isSendingCode) ? 'default' : 'pointer',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: 'bold',
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
                   }}
               >
-                {isVerified ? 'Verificat ✓' : isSendingCode ? 'Se trimite...' : isCodeSent ? 'Retrimite' : 'Trimite cod'}
+                {isVerified ? 'Verificat ✓' : isSendingCode ? 'Se trimite...' : isCodeSent ? 'Retrimite' : 'Trimite'}
               </button>
             </div>
           </div>
 
           {isCodeSent && (
-              <div style={{ marginBottom: '14px', backgroundColor: isVerified ? '#f0fff0' : '#f9f9f9', padding: '10px', borderRadius: '4px', border: isVerified ? '1px solid green' : '1px dashed #e63946' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: isVerified ? 'green' : '#e63946' }}>
-                  {isVerified ? '✓ Email Verificat' : 'Cod Verificare Email (6 cifre):'}
+              <div style={{ marginBottom: '12px', backgroundColor: isVerified ? '#f0fff0' : '#f9f9f9', padding: '8px', borderRadius: '4px', border: isVerified ? '1px solid green' : '1px dashed #e63946' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: isVerified ? 'green' : '#e63946' }}>
+                  {isVerified ? '✓ Email Verificat' : 'Cod Verificare (6 cifre):'}
                 </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
                   <input
                       type="text"
                       maxLength={6}
@@ -317,24 +318,24 @@ function Register({ onSwitch, onRegisterSuccess }) {
                       required
                       disabled={isVerified || isLoading}
                       placeholder="123456"
-                      style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '4px', fontWeight: 'bold' }}
+                      style={{ flex: 1, padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '3px', fontWeight: 'bold', fontSize: '13px', minWidth: 0 }}
                   />
                   {!isVerified && (
                       <button
                           type="button"
                           onClick={handleVerifyCode}
                           disabled={isVerifyingCode || isLoading}
-                          style={{ padding: '8px 14px', backgroundColor: '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: isVerifyingCode ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                          style={{ padding: '7px 10px', backgroundColor: '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: isVerifyingCode ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 'bold', flexShrink: 0 }}
                       >
-                        {isVerifyingCode ? 'Se verifică...' : 'Verifică'}
+                        {isVerifyingCode ? '...' : 'Verifică'}
                       </button>
                   )}
                 </div>
               </div>
           )}
 
-          <div style={{ marginBottom: '16px' }}>
-            <label htmlFor="reg-password" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Parolă:</label>
+          <div style={{ marginBottom: '14px' }}>
+            <label htmlFor="reg-password" style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Parolă:</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                   id="reg-password"
@@ -345,21 +346,20 @@ function Register({ onSwitch, onRegisterSuccess }) {
                   autoComplete="new-password"
                   disabled={isLoading}
                   placeholder="••••••••"
-                  style={{ width: '100%', padding: '9px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }}
               />
               <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  title={showPassword ? 'Ascunde parola' : 'Arată parola'}
                   style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: '#666' }}
               >
                 {showPassword ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                 ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                       <line x1="1" y1="1" x2="23" y2="23"></line>
                     </svg>
@@ -367,24 +367,16 @@ function Register({ onSwitch, onRegisterSuccess }) {
               </button>
             </div>
 
-            <div style={{ marginTop: '8px', fontSize: '12px', backgroundColor: '#f8f9fa', padding: '8px', borderRadius: '4px', border: '1px solid #eee' }}>
-              <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', color: '#444' }}>Cerințe parolă:</p>
-              <div style={{ color: passwordCriteria.length ? '#2b9348' : '#888' }}>
-                {passwordCriteria.length ? '✓' : '•'} Minim 8 caractere
-              </div>
-              <div style={{ color: passwordCriteria.uppercase ? '#2b9348' : '#888' }}>
-                {passwordCriteria.uppercase ? '✓' : '•'} Cel puțin o majusculă (A-Z)
-              </div>
-              <div style={{ color: passwordCriteria.number ? '#2b9348' : '#888' }}>
-                {passwordCriteria.number ? '✓' : '•'} Cel puțin o cifră (0-9)
-              </div>
-              <div style={{ color: passwordCriteria.special ? '#2b9348' : '#888' }}>
-                {passwordCriteria.special ? '✓' : '•'} Cel puțin un caracter special (!@#$%^&* etc.)
-              </div>
+            <div style={{ marginTop: '6px', fontSize: '11px', backgroundColor: '#f8f9fa', padding: '6px', borderRadius: '4px', border: '1px solid #eee' }}>
+              <p style={{ margin: '0 0 3px 0', fontWeight: 'bold', color: '#444' }}>Cerințe parolă:</p>
+              <div style={{ color: passwordCriteria.length ? '#2b9348' : '#888' }}>{passwordCriteria.length ? '✓' : '•'} Minim 8 caractere</div>
+              <div style={{ color: passwordCriteria.uppercase ? '#2b9348' : '#888' }}>{passwordCriteria.uppercase ? '✓' : '•'} O majusculă (A-Z)</div>
+              <div style={{ color: passwordCriteria.number ? '#2b9348' : '#888' }}>{passwordCriteria.number ? '✓' : '•'} O cifră (0-9)</div>
+              <div style={{ color: passwordCriteria.special ? '#2b9348' : '#888' }}>{passwordCriteria.special ? '✓' : '•'} Un caracter special</div>
             </div>
           </div>
 
-          <div style={{ marginBottom: '12px' }}>
+          <div style={{ marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
               <input
                   type="checkbox"
@@ -397,23 +389,22 @@ function Register({ onSwitch, onRegisterSuccess }) {
                     }
                   }}
                   disabled={isLoading}
-                  style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
+                  style={{ marginTop: '2px', cursor: 'pointer', width: '15px', height: '15px', flexShrink: 0 }}
               />
-              <label htmlFor="terms-checkbox" style={{ fontSize: '13px', color: '#333', lineHeight: '1.4', cursor: 'pointer' }}>
-                Am citit și sunt de acord cu{' '}
+              <label htmlFor="terms-checkbox" style={{ fontSize: '12px', color: '#333', lineHeight: '1.3', cursor: 'pointer' }}>
+                Sunt de acord cu{' '}
                 <button
                     type="button"
                     onClick={() => setShowTermsModal(true)}
                     style={{ background: 'none', border: 'none', color: '#e63946', textDecoration: 'underline', padding: 0, font: 'inherit', cursor: 'pointer' }}
                 >
                   Politica de Confidențialitate
-                </button>{' '}
-                și prelucrarea datelor cu caracter personal.*
+                </button>.*
               </label>
             </div>
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
               <input
                   type="checkbox"
@@ -421,10 +412,10 @@ function Register({ onSwitch, onRegisterSuccess }) {
                   checked={notifyCampaigns}
                   onChange={(e) => setNotifyCampaigns(e.target.checked)}
                   disabled={isLoading}
-                  style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
+                  style={{ marginTop: '2px', cursor: 'pointer', width: '15px', height: '15px', flexShrink: 0 }}
               />
-              <label htmlFor="notify-checkbox" style={{ fontSize: '13px', color: '#333', lineHeight: '1.4', cursor: 'pointer' }}>
-                doresc sa fiu informat pe mail cand se deschid campanii noi, cand apar restrictii de donare legate de unde am calatorit etc
+              <label htmlFor="notify-checkbox" style={{ fontSize: '12px', color: '#333', lineHeight: '1.3', cursor: 'pointer' }}>
+                Doresc notificări pe mail pentru campanii noi și restricții.
               </label>
             </div>
           </div>
@@ -434,13 +425,13 @@ function Register({ onSwitch, onRegisterSuccess }) {
               disabled={isLoading}
               style={{
                 width: '100%',
-                padding: '12px',
+                padding: '10px',
                 backgroundColor: isLoading ? '#ccc' : '#e63946',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
-                fontSize: '16px',
+                fontSize: '14px',
                 fontWeight: 'bold'
               }}
           >
@@ -448,48 +439,35 @@ function Register({ onSwitch, onRegisterSuccess }) {
           </button>
 
           {error && (
-              <div style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginTop: '12px', textAlign: 'center', border: '1px solid #f5c6cb' }}>
+              <div style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '8px', borderRadius: '4px', fontSize: '12px', marginTop: '10px', textAlign: 'center', border: '1px solid #f5c6cb' }}>
                 {error}
               </div>
           )}
         </form>
 
-        <p style={{ textAlign: 'center', marginTop: '15px', fontSize: '14px' }}>
+        <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px' }}>
           Ai deja un cont?{' '}
           <button type="button" onClick={onSwitch} style={{ background: 'none', border: 'none', color: '#e63946', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'bold' }}>
-            Conectează-te aici
+            Conectează-te
           </button>
         </p>
 
         {showTermsModal && (
-            <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-              <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '550px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+            <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px', boxSizing: 'border-box' }}>
+              <div style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '8px', maxWidth: '500px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
 
-                <h3 style={{ marginTop: 0, marginBottom: '5px', color: '#e63946', textAlign: 'center' }}>Politica de Confidențialitate</h3>
-                <p style={{ fontSize: '12px', color: '#666', textAlign: 'center', marginTop: 0, marginBottom: '15px' }}>Ultima actualizare: Octombrie 2026</p>
+                <h3 style={{ marginTop: 0, marginBottom: '4px', color: '#e63946', textAlign: 'center', fontSize: '16px' }}>Politica de Confidențialitate</h3>
+                <p style={{ fontSize: '11px', color: '#666', textAlign: 'center', marginTop: 0, marginBottom: '10px' }}>Octombrie 2026</p>
 
-                <div style={{ fontSize: '13px', color: '#444', lineHeight: '1.6', textAlign: 'left', overflowY: 'auto', paddingRight: '10px', flex: 1, borderTop: '1px solid #eee', borderBottom: '1px solid #eee', paddingBottom: '10px', paddingTop: '10px' }}>
-                  <p>
-                    Prin utilizarea aplicației noastre pentru campaniile de donare de sânge, sunteți de acord cu colectarea și prelucrarea datelor dumneavoastră conform prezentei Politici de Confidențialitate. Ne angajăm să vă protejăm confidențialitatea și să respectăm legislația în vigoare privind protecția datelor (GDPR - Regulamentul UE 2016/679).
-                  </p>
-
-                  <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>1. Cine colectează datele dumneavoastră</h4>
-                  <p style={{ margin: '0 0 10px 0' }}>
-                    Datele sunt colectate și procesate de către echipa de organizare a campaniei comunitare „Dumbrăvița Salvează Vieți”, desfășurată în parteneriat cu Centrul Regional de Transfuzie Sanguină Timișoara.
-                  </p>
-
-                  <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>2. Ce date colectăm și în ce scop</h4>
-                  <p style={{ margin: '0 0 10px 0' }}>
-                    Colectăm doar datele minime necesare pentru buna desfășurare a campaniilor de donare de sânge organizate în Dumbrăvița și pentru generarea de statistici comunitare, precum și pentru notificarea dumneavoastră privitoare la campanii și restricții.
-                  </p>
-
-                  <h4 style={{ color: '#222', margin: '12px 0 4px 0' }}>3. Securitatea datelor</h4>
-                  <p style={{ margin: '0 0 10px 0' }}>
-                    Toate datele introduse sunt criptate și stocate în condiții de maximă siguranță, accesul fiind permis exclusiv administratorilor autorizați în scopul gestionării donărilor.
-                  </p>
+                <div style={{ fontSize: '12px', color: '#444', lineHeight: '1.5', textAlign: 'left', overflowY: 'auto', paddingRight: '6px', flex: 1, borderTop: '1px solid #eee', borderBottom: '1px solid #eee', paddingBottom: '8px', paddingTop: '8px' }}>
+                  <p>Prin utilizarea aplicației noastre pentru campaniile de donare de sânge, sunteți de acord cu prelucrarea datelor conform Regulamentului UE 2016/679 (GDPR).</p>
+                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>1. Colectarea datelor</h4>
+                  <p style={{ margin: '0 0 6px 0' }}>Datele sunt procesate de echipa „Dumbrăvița Salvează Vieți” împreună cu Centrul de Transfuzie Sanguină Timișoara.</p>
+                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>2. Securitate</h4>
+                  <p style={{ margin: '0 0 6px 0' }}>Informațiile sunt criptate și utilizate strict în scop organizatoric.</p>
                 </div>
 
-                <div style={{ textAlign: 'center', marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ textAlign: 'center', marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center', flexShrink: 0 }}>
                   <button
                       type="button"
                       onClick={() => {
@@ -499,14 +477,14 @@ function Register({ onSwitch, onRegisterSuccess }) {
                         }
                         setShowTermsModal(false);
                       }}
-                      style={{ backgroundColor: '#2b9348', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+                      style={{ backgroundColor: '#2b9348', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}
                   >
-                    Accept și închid
+                    Accept
                   </button>
                   <button
                       type="button"
                       onClick={() => setShowTermsModal(false)}
-                      style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}
+                      style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}
                   >
                     Închide
                   </button>

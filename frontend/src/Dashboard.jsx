@@ -44,7 +44,6 @@ function Dashboard({ onLogout }) {
   const [reminderConfirmModal, setReminderConfirmModal] = useState({ isOpen: false, campaign: null });
   const [reminderResultModal, setReminderResultModal] = useState({ isOpen: false, isSuccess: true, message: '' });
 
-  // STATE-URI POP-UP WAITLIST
   const [waitlistPopup, setWaitlistPopup] = useState({
     isOpen: false,
     waitId: null,
@@ -56,7 +55,6 @@ function Dashboard({ onLogout }) {
     message: ''
   });
 
-  // Formular Campanie
   const [newCampTitle, setNewCampTitle] = useState('');
   const [newCampLocation, setNewCampLocation] = useState('');
   const [newCampAddress, setNewCampAddress] = useState('');
@@ -111,11 +109,9 @@ function Dashboard({ onLogout }) {
     }
   };
 
-  // Seturi de ID-uri pentru campaniile active (folosite pentru a ascunde programările din campanii finalizate din dashboard)
   const activeCampaignIds = new Set(campaigns.filter(c => c.is_active).map(c => c.id));
   const activeCampaignTitles = new Set(campaigns.filter(c => c.is_active).map(c => c.title));
 
-  // FILTRARE PROGRAMĂRI PERSONALE PENTRU DASHBOARD (DOAR PENTRU CAMPANII ACTIVE)
   const myAppointments = myAppointmentsRaw.filter(app => {
     const isCampaignActive =
         (app.campaign_id && activeCampaignIds.has(app.campaign_id)) ||
@@ -136,7 +132,6 @@ function Dashboard({ onLogout }) {
     );
   });
 
-  // FILTRARE WAITLIST PERSONAL (DOAR PENTRU CAMPANII ACTIVE)
   const myWaitlist = myWaitlistRaw.filter(wait => {
     return (
         (wait.campaign_id && activeCampaignIds.has(wait.campaign_id)) ||
@@ -208,7 +203,6 @@ function Dashboard({ onLogout }) {
     }
   };
 
-  // FILTRARE PROGRAMĂRI ADMIN (DOAR PENTRU CAMPANII ACTIVE)
   const filteredAppointments = adminAppointments.filter(app => {
     const isCampaignActive =
         (app.campaign_id && activeCampaignIds.has(app.campaign_id)) ||
@@ -409,77 +403,75 @@ function Dashboard({ onLogout }) {
   const displayedCampaigns = isAdmin ? campaigns : campaigns.filter(c => c.is_active);
 
   return (
-      <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh', paddingBottom: '50px' }}>
+      <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh', paddingBottom: '50px', boxSizing: 'border-box', overflowX: 'hidden' }}>
 
-        {/* NAVBAR PRINCIPAL */}
-        <nav style={{ backgroundColor: '#fff', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <span style={{ fontSize: '24px' }}>🩸</span>
-            <h2 style={{ margin: 0, color: '#e63946', fontSize: '22px', fontWeight: 'bold' }}>Platformă Donare Sânge</h2>
+        <nav style={{ backgroundColor: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', flexWrap: 'wrap', gap: '10px', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '20px' }}>🩸</span>
+            <h2 style={{ margin: 0, color: '#e63946', fontSize: '18px', fontWeight: 'bold' }}>Donare Sânge</h2>
 
             {currentUser && (
                 <button
                     onClick={() => setShowProfileModal(true)}
-                    style={{ padding: '7px 14px', backgroundColor: '#fdf0f1', color: '#e63946', border: '1px solid #f9dadc', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  👤 Profilul Meu
+                    style={{ padding: '5px 10px', backgroundColor: '#fdf0f1', color: '#e63946', border: '1px solid #f9dadc', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  👤 Profil
                 </button>
             )}
           </div>
 
           {currentUser && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ display: 'block', fontWeight: 'bold', color: '#333' }}>{currentUser.name} {currentUser.surname}</span>
-                  <span style={{ fontSize: '12px', color: 'white', backgroundColor: '#e63946', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                {isAdmin ? 'Administrator' : 'Donator'}
+                  <span style={{ display: 'block', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>{currentUser.name} {currentUser.surname}</span>
+                  <span style={{ fontSize: '10px', color: 'white', backgroundColor: '#e63946', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                {isAdmin ? 'Admin' : 'Donator'}
               </span>
                 </div>
-                <button onClick={onLogout} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-                  Deconectare
+                <button onClick={onLogout} style={{ padding: '6px 12px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>
+                  Ieșire
                 </button>
               </div>
           )}
         </nav>
 
-        <div style={{ maxWidth: '1200px', margin: '30px auto', padding: '0 20px' }}>
+        <div style={{ maxWidth: '1200px', margin: '20px auto', padding: '0 15px', boxSizing: 'border-box' }}>
 
-          {successNotification && <div style={{ backgroundColor: '#e3ffe3', color: '#198754', padding: '15px', borderRadius: '6px', marginBottom: '20px', borderLeft: '5px solid #198754', fontWeight: 'bold' }}>✔️ {successNotification}</div>}
-          {apiError && <div style={{ backgroundColor: '#ffe3e3', color: '#dc3545', padding: '15px', borderRadius: '6px', marginBottom: '20px', borderLeft: '5px solid #dc3545', fontWeight: 'bold' }}>❌ {apiError}</div>}
+          {successNotification && <div style={{ backgroundColor: '#e3ffe3', color: '#198754', padding: '12px', borderRadius: '6px', marginBottom: '15px', borderLeft: '5px solid #198754', fontWeight: 'bold', fontSize: '13px' }}>✔️ {successNotification}</div>}
+          {apiError && <div style={{ backgroundColor: '#ffe3e3', color: '#dc3545', padding: '12px', borderRadius: '6px', marginBottom: '15px', borderLeft: '5px solid #dc3545', fontWeight: 'bold', fontSize: '13px' }}>❌ {apiError}</div>}
 
           {loading ? (
-              <div style={{ textAlign: 'center', padding: '50px', fontSize: '18px', color: '#666' }}>Se încarcă datele panoului...</div>
+              <div style={{ textAlign: 'center', padding: '40px', fontSize: '16px', color: '#666' }}>Se încarcă datele...</div>
           ) : (
               <>
-                {/* MANAGEMENT REZERVĂRI ADMIN */}
                 {isAdmin && (
                     <>
-                      <section style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #e1e4e8' }}>
+                      <section style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #e1e4e8', boxSizing: 'border-box' }}>
 
-                        <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px' }}>
-                          📋 Centralizator Management Programări (Vizualizare Medicală)
+                        <h3 style={{ margin: '0 0 15px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', fontSize: '16px' }}>
+                          📋 Management Programări
                         </h3>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr', gap: '15px', marginBottom: '20px', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '6px', border: '1px solid #eee' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '15px', backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '6px', border: '1px solid #eee', boxSizing: 'border-box' }}>
 
                           <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#555' }}>🔍 Căutare Donator:</label>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px', color: '#555' }}>🔍 Căutare Donator:</label>
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Nume, prenume sau telefon..."
-                                style={{ width: '100%', padding: '8px 12px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', boxSizing: 'border-box' }}
+                                placeholder="Nume sau telefon..."
+                                style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '12px', boxSizing: 'border-box' }}
                             />
                           </div>
 
                           <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#555' }}>📍 Filtrează după Campanie:</label>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px', color: '#555' }}>📍 Campanie:</label>
                             <select
                                 value={selectedCampaignFilter}
                                 onChange={(e) => setSelectedCampaignFilter(e.target.value)}
-                                style={{ width: '100%', padding: '8px 12px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', backgroundColor: 'white', boxSizing: 'border-box' }}
+                                style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '12px', backgroundColor: 'white', boxSizing: 'border-box' }}
                             >
-                              <option value="all">Toate Campaniile Active</option>
+                              <option value="all">Toate Active</option>
                               {campaigns.filter(c => c.is_active).map(c => (
                                   <option key={c.id} value={c.title}>{c.title}</option>
                               ))}
@@ -487,13 +479,13 @@ function Dashboard({ onLogout }) {
                           </div>
 
                           <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#555' }}>📌 Filtrează după Status:</label>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px', color: '#555' }}>📌 Status:</label>
                             <select
                                 value={selectedStatusFilter}
                                 onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                                style={{ width: '100%', padding: '8px 12px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', backgroundColor: 'white', boxSizing: 'border-box' }}
+                                style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '12px', backgroundColor: 'white', boxSizing: 'border-box' }}
                             >
-                              <option value="all">Toate Statusurile</option>
+                              <option value="all">Toate</option>
                               <option value="confirmed">Confirmată</option>
                               <option value="attended">Prezent ✓</option>
                               <option value="no_show">Absent ✗</option>
@@ -502,19 +494,19 @@ function Dashboard({ onLogout }) {
                         </div>
 
                         {filteredAppointments.length === 0 ? (
-                            <p style={{ color: '#666', fontStyle: 'italic', padding: '15px 0' }}>Nu s-a găsit nicio programare în campaniile active conform filtrelor selectate.</p>
+                            <p style={{ color: '#666', fontStyle: 'italic', padding: '10px 0', fontSize: '13px' }}>Nu s-a găsit nicio programare conform filtrelor.</p>
                         ) : (
                             <>
                               <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px', fontSize: '13px' }}>
                                   <thead>
                                   <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                                    <th style={{ padding: '12px' }}>Donator (Click pt. Observații)</th>
-                                    <th style={{ padding: '12px' }}>Telefon</th>
-                                    <th style={{ padding: '12px' }}>Campanie</th>
-                                    <th style={{ padding: '12px' }}>Dată & Oră</th>
-                                    <th style={{ padding: '12px' }}>Status</th>
-                                    <th style={{ padding: '12px', textAlign: 'center' }}>Acțiuni Status</th>
+                                    <th style={{ padding: '10px' }}>Donator</th>
+                                    <th style={{ padding: '10px' }}>Telefon</th>
+                                    <th style={{ padding: '10px' }}>Campanie</th>
+                                    <th style={{ padding: '10px' }}>Dată & Oră</th>
+                                    <th style={{ padding: '10px' }}>Status</th>
+                                    <th style={{ padding: '10px', textAlign: 'center' }}>Acțiuni</th>
                                   </tr>
                                   </thead>
                                   <tbody>
@@ -523,25 +515,24 @@ function Dashboard({ onLogout }) {
                                     return (
                                         <tr key={appId} style={{ borderBottom: '1px solid #eceeef' }}>
                                           <td
-                                              style={{ padding: '12px', fontWeight: 'bold', whiteSpace: 'nowrap', color: '#e63946', cursor: 'pointer', textDecoration: 'underline' }}
+                                              style={{ padding: '10px', fontWeight: 'bold', whiteSpace: 'nowrap', color: '#e63946', cursor: 'pointer', textDecoration: 'underline' }}
                                               onClick={() => setSelectedDonorForNotes(app)}
-                                              title="Click pentru a vedea sau adăuga observații medicale"
                                           >
                                             {app.donor_name} {app.donor_surname} 🩺
                                           </td>
 
-                                          <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
+                                          <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
                                             {app.donor_phone}
                                           </td>
-                                          <td style={{ padding: '12px', fontWeight: '500', whiteSpace: 'nowrap' }}>
+                                          <td style={{ padding: '10px', fontWeight: '500', whiteSpace: 'nowrap' }}>
                                             {app.campaign_title}
                                           </td>
-                                          <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
+                                          <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
                                             {formatDateRo(app.campaign_date)} | <strong style={{ color: '#e63946' }}>{formatTimeShort(app.slot_time)}</strong>
                                           </td>
-                                          <td style={{ padding: '12px' }}>
+                                          <td style={{ padding: '10px' }}>
                                     <span style={{
-                                      padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap',
+                                      padding: '3px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap',
                                       backgroundColor: app.status === 'confirmed' ? '#e3ffe3' : app.status === 'attended' ? '#d1e7dd' : '#fff3cd',
                                       color: app.status === 'confirmed' ? '#198754' : app.status === 'attended' ? '#0f5132' : '#856404'
                                     }}>
@@ -549,10 +540,10 @@ function Dashboard({ onLogout }) {
                                     </span>
                                           </td>
 
-                                          <td style={{ padding: '12px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                                            <button onClick={() => handleMarkAttendance(appId)} disabled={app.status === 'attended'} style={{ padding: '6px 8px', backgroundColor: app.status === 'attended' ? '#ccc' : '#198754', color: 'white', border: 'none', borderRadius: '4px', cursor: app.status === 'attended' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Prezent</button>
-                                            <button onClick={() => handleMarkNoShow(appId)} disabled={app.status === 'no_show'} style={{ padding: '6px 8px', backgroundColor: app.status === 'no_show' ? '#ccc' : '#ffc107', color: '#333', border: 'none', borderRadius: '4px', cursor: app.status === 'no_show' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Absent</button>
-                                            <button onClick={() => handleCancelClick(appId)} style={{ padding: '6px 8px', backgroundColor: '#fff', border: '1px solid #dc3545', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Anulează</button>
+                                          <td style={{ padding: '10px', display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                                            <button onClick={() => handleMarkAttendance(appId)} disabled={app.status === 'attended'} style={{ padding: '5px 7px', backgroundColor: app.status === 'attended' ? '#ccc' : '#198754', color: 'white', border: 'none', borderRadius: '4px', cursor: app.status === 'attended' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Prezent</button>
+                                            <button onClick={() => handleMarkNoShow(appId)} disabled={app.status === 'no_show'} style={{ padding: '5px 7px', backgroundColor: app.status === 'no_show' ? '#ccc' : '#ffc107', color: '#333', border: 'none', borderRadius: '4px', cursor: app.status === 'no_show' ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Absent</button>
+                                            <button onClick={() => handleCancelClick(appId)} style={{ padding: '5px 7px', backgroundColor: '#fff', border: '1px solid #dc3545', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>Anulează</button>
                                           </td>
                                         </tr>
                                     );
@@ -561,27 +552,27 @@ function Dashboard({ onLogout }) {
                                 </table>
                               </div>
 
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #eee' }}>
-                        <span style={{ fontSize: '13px', color: '#666' }}>
-                          Afișare <strong>{indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredAppointments.length)}</strong> din <strong>{filteredAppointments.length}</strong> programări
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px', paddingTop: '12px', borderTop: '1px solid #eee', flexWrap: 'wrap', gap: '10px' }}>
+                        <span style={{ fontSize: '12px', color: '#666' }}>
+                          Afișare <strong>{indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredAppointments.length)}</strong> din <strong>{filteredAppointments.length}</strong>
                         </span>
 
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                   <button
                                       disabled={currentPage === 1}
                                       onClick={() => setCurrentPage(prev => prev - 1)}
-                                      style={{ padding: '6px 12px', backgroundColor: currentPage === 1 ? '#e9ecef' : '#2b2d42', color: currentPage === 1 ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                                      style={{ padding: '5px 10px', backgroundColor: currentPage === 1 ? '#e9ecef' : '#2b2d42', color: currentPage === 1 ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
                                     ◄ Anterior
                                   </button>
 
-                                  <span style={{ fontSize: '13px', padding: '0 8px', fontWeight: 'bold', color: '#333' }}>
-                            Pagina {currentPage} din {totalPages}
+                                  <span style={{ fontSize: '12px', padding: '0 5px', fontWeight: 'bold', color: '#333' }}>
+                            {currentPage}/{totalPages}
                           </span>
 
                                   <button
                                       disabled={currentPage === totalPages}
                                       onClick={() => setCurrentPage(prev => prev + 1)}
-                                      style={{ padding: '6px 12px', backgroundColor: currentPage === totalPages ? '#e9ecef' : '#2b2d42', color: currentPage === totalPages ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                                      style={{ padding: '5px 10px', backgroundColor: currentPage === totalPages ? '#e9ecef' : '#2b2d42', color: currentPage === totalPages ? '#6c757d' : 'white', border: 'none', borderRadius: '4px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
                                     Următor ►
                                   </button>
                                 </div>
@@ -590,35 +581,34 @@ function Dashboard({ onLogout }) {
                         )}
                       </section>
 
-                      {/* TOP 10 DONATORI */}
-                      <section style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #e1e4e8' }}>
-                        <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px' }}>
-                          🏆 Top 10 Donatori (Efectivi)
+                      <section style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #e1e4e8', boxSizing: 'border-box' }}>
+                        <h3 style={{ margin: '0 0 15px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', fontSize: '16px' }}>
+                          🏆 Top 10 Donatori
                         </h3>
                         {topDonors.length === 0 ? (
-                            <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>Nu există încă donări confirmate cu statusul 'Prezent'.</p>
+                            <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>Nu există donări confirmate.</p>
                         ) : (
                             <div style={{ overflowX: 'auto' }}>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '350px' }}>
                                 <thead>
                                 <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                                  <th style={{ padding: '10px 12px', width: '60px' }}>Loc</th>
-                                  <th style={{ padding: '10px 12px' }}>Donator</th>
-                                  <th style={{ padding: '10px 12px', textAlign: 'center' }}>Total Donări Reale</th>
+                                  <th style={{ padding: '8px 10px', width: '50px' }}>Loc</th>
+                                  <th style={{ padding: '8px 10px' }}>Donator</th>
+                                  <th style={{ padding: '8px 10px', textAlign: 'center' }}>Total Donări</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {topDonors.map((donor, idx) => (
                                     <tr key={idx} style={{ borderBottom: '1px solid #eceeef' }}>
-                                      <td style={{ padding: '10px 12px', fontWeight: 'bold' }}>
+                                      <td style={{ padding: '8px 10px', fontWeight: 'bold' }}>
                                         {idx === 0 ? '🥇 1' : idx === 1 ? '🥈 2' : idx === 2 ? '🥉 3' : `${idx + 1}`}
                                       </td>
-                                      <td style={{ padding: '10px 12px', fontWeight: 'bold', color: '#2b2d42' }}>
+                                      <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#2b2d42' }}>
                                         {donor.name} {donor.surname}
                                       </td>
-                                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                        <strong style={{ color: '#2e7d32', backgroundColor: '#e8f5e9', padding: '4px 12px', borderRadius: '12px', border: '1px solid #c8e6c9' }}>
-                                          {donor.total_donations} donări
+                                      <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                                        <strong style={{ color: '#2e7d32', backgroundColor: '#e8f5e9', padding: '3px 10px', borderRadius: '10px', border: '1px solid #c8e6c9', fontSize: '12px' }}>
+                                          {donor.total_donations}
                                         </strong>
                                       </td>
                                     </tr>
@@ -629,50 +619,49 @@ function Dashboard({ onLogout }) {
                         )}
                       </section>
 
-                      {/* CENTRALIZATOR WAITLIST */}
-                      <section style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '40px', border: '1px solid #e1e4e8' }}>
-                        <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px' }}>
-                          📝 Centralizator Listă de Așteptare (Waitlist Inteligent)
+                      <section style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #e1e4e8', boxSizing: 'border-box' }}>
+                        <h3 style={{ margin: '0 0 15px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', fontSize: '16px' }}>
+                          📝 Listă de Așteptare (Waitlist)
                         </h3>
                         {adminWaitlist.filter(w => activeCampaignIds.has(w.campaign_id)).length === 0 ? (
-                            <p style={{ color: '#666', fontStyle: 'italic' }}>Nu există nicio persoană înscrisă în lista de așteptare pentru campaniile active.</p>
+                            <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>Nu există înregistrări în waitlist.</p>
                         ) : (
                             <div style={{ overflowX: 'auto' }}>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '650px', fontSize: '13px' }}>
                                 <thead>
                                 <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                                  <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>Donator</th>
-                                  <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>Telefon</th>
-                                  <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>Campanie Alocată</th>
-                                  <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>Interval Preferat</th>
-                                  <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>Timp Deplasare</th>
-                                  <th style={{ padding: '12px', whiteSpace: 'nowrap' }}>Status</th>
-                                  <th style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>Acțiuni</th>
+                                  <th style={{ padding: '10px' }}>Donator</th>
+                                  <th style={{ padding: '10px' }}>Telefon</th>
+                                  <th style={{ padding: '10px' }}>Campanie</th>
+                                  <th style={{ padding: '10px' }}>Interval Preferat</th>
+                                  <th style={{ padding: '10px' }}>Deplasare</th>
+                                  <th style={{ padding: '10px' }}>Status</th>
+                                  <th style={{ padding: '10px', textAlign: 'center' }}>Acțiuni</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {adminWaitlist.filter(w => activeCampaignIds.has(w.campaign_id)).map((wait) => (
                                     <tr key={wait.id} style={{ borderBottom: '1px solid #eceeef' }}>
-                                      <td style={{ padding: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                      <td style={{ padding: '10px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                                         {wait.name} {wait.surname}
                                       </td>
-                                      <td style={{ padding: '12px', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                                      <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
                                         📞 {wait.phone}
                                       </td>
-                                      <td style={{ padding: '12px', fontWeight: '500', whiteSpace: 'nowrap' }}>
+                                      <td style={{ padding: '10px', fontWeight: '500', whiteSpace: 'nowrap' }}>
                                         {wait.campaign_title}
                                       </td>
-                                      <td style={{ padding: '12px', fontWeight: 'bold', color: '#e63946', whiteSpace: 'nowrap' }}>
+                                      <td style={{ padding: '10px', fontWeight: 'bold', color: '#e63946', whiteSpace: 'nowrap' }}>
                                         {wait.preferred_time_range}
                                       </td>
-                                      <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
+                                      <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
                                         ⏱️ {wait.travel_time_minutes} min
                                       </td>
-                                      <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
+                                      <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
                                 <span style={{
-                                  padding: '4px 10px',
-                                  borderRadius: '12px',
-                                  fontSize: '12px',
+                                  padding: '3px 8px',
+                                  borderRadius: '10px',
+                                  fontSize: '11px',
                                   fontWeight: 'bold',
                                   backgroundColor: wait.status === 'accepted' ? '#d1e7dd' :
                                       (wait.status === 'declined' || wait.status === 'expired') ? '#f8d7da' : '#fff3cd',
@@ -682,15 +671,15 @@ function Dashboard({ onLogout }) {
                                   {wait.status === 'waiting' ? 'În așteptare' :
                                       wait.status === 'notified' ? 'Notificat 📩' :
                                           wait.status === 'accepted' ? 'Asignat ✓' :
-                                              (wait.status === 'declined' || wait.status === 'expired') ? 'Refuzat / Expirat ✗' : wait.status}
+                                              (wait.status === 'declined' || wait.status === 'expired') ? 'Refuzat ✗' : wait.status}
                                 </span>
                                       </td>
-                                      <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                      <td style={{ padding: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                         <button
                                             onClick={() => handleAssignWaitlist(wait.id, wait.campaign_id, wait.campaign_title)}
                                             disabled={wait.status === 'accepted'}
                                             style={{
-                                              padding: '6px 12px',
+                                              padding: '5px 10px',
                                               backgroundColor: wait.status === 'accepted' ? '#ccc' : '#e63946',
                                               color: 'white',
                                               border: 'none',
@@ -711,53 +700,52 @@ function Dashboard({ onLogout }) {
                         )}
                       </section>
 
-                      {/* MANAGEMENT CHESTIONAR ELIGIBILITATE */}
-                      <section style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '40px', border: '1px solid #e1e4e8' }}>
-                        <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px' }}>
+                      <section style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '30px', border: '1px solid #e1e4e8', boxSizing: 'border-box' }}>
+                        <h3 style={{ margin: '0 0 15px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', fontSize: '16px' }}>
                           ⚙️ Management Chestionar Eligibilitate
                         </h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'start' }}>
-                          <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '6px', border: '1px solid #dee2e6' }}>
-                            <h4 style={{ margin: '0 0 15px 0', color: '#e63946', fontSize: '15px' }}>🆕 Adaugă Întrebare Nouă</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', alignItems: 'start' }}>
+                          <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '6px', border: '1px solid #dee2e6', boxSizing: 'border-box' }}>
+                            <h4 style={{ margin: '0 0 12px 0', color: '#e63946', fontSize: '14px' }}>🆕 Adaugă Întrebare</h4>
                             <form onSubmit={handleAddQuestion}>
-                              <div style={{ marginBottom: '12px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 'bold' }}>Text Întrebare:</label>
+                              <div style={{ marginBottom: '10px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Text Întrebare:</label>
                                 <textarea
                                     value={newQuestionText}
                                     onChange={(e) => setNewQuestionText(e.target.value)}
                                     required
                                     rows="2"
-                                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontFamily: 'sans-serif' }}
+                                    style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontFamily: 'sans-serif', fontSize: '12px' }}
                                     placeholder="Ex: Am peste 50 kg"
                                 />
                               </div>
-                              <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 'bold' }}>Tip Răspuns:</label>
-                                <select value={newQuestionType} onChange={(e) => setNewQuestionType(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff' }}>
-                                  <option value="checkbox">Căsuță de bifat (Checkbox)</option>
-                                  <option value="radio">Opțiune DA/NU (Radio)</option>
-                                  <option value="numeric">Valoare Numerică</option>
+                              <div style={{ marginBottom: '12px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Tip Răspuns:</label>
+                                <select value={newQuestionType} onChange={(e) => setNewQuestionType(e.target.value)} style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', fontSize: '12px', boxSizing: 'border-box' }}>
+                                  <option value="checkbox">Checkbox</option>
+                                  <option value="radio">DA/NU (Radio)</option>
+                                  <option value="numeric">Numeric</option>
                                 </select>
                               </div>
-                              <button type="submit" style={{ width: '100%', padding: '9px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
+                              <button type="submit" style={{ width: '100%', padding: '8px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>
                                 Adaugă în Chestionar
                               </button>
                             </form>
                           </div>
 
                           <div>
-                            <h4 style={{ margin: '0 0 15px 0', color: '#333', fontSize: '15px' }}>📋 Întrebări Active:</h4>
+                            <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '14px' }}>📋 Întrebări Active:</h4>
                             {eligibilityQuestions.length === 0 ? (
-                                <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>Nu există întrebări active în baza de date.</p>
+                                <p style={{ color: '#666', fontStyle: 'italic', fontSize: '12px' }}>Nu există întrebări active.</p>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '250px', overflowY: 'auto' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
                                   {eligibilityQuestions.map((q) => (
-                                      <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: '#fff', border: '1px solid #e1e4e8', borderRadius: '4px' }}>
-                                        <span style={{ fontSize: '13px', color: '#333' }}><strong>•</strong> {q.question_text}</span>
+                                      <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', backgroundColor: '#fff', border: '1px solid #e1e4e8', borderRadius: '4px', boxSizing: 'border-box' }}>
+                                        <span style={{ fontSize: '12px', color: '#333' }}><strong>•</strong> {q.question_text}</span>
                                         <button
                                             type="button"
                                             onClick={() => handleDeleteQuestion(q.id)}
-                                            style={{ padding: '5px 9px', backgroundColor: '#fff', border: '1px solid #dc3545', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+                                            style={{ padding: '4px 8px', backgroundColor: '#fff', border: '1px solid #dc3545', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', flexShrink: '0', marginLeft: '8px' }}
                                         >
                                           Șterge
                                         </button>
@@ -771,99 +759,102 @@ function Dashboard({ onLogout }) {
                     </>
                 )}
 
-                {/* SECȚIUNEA DE JOS: FORMULAR + LISTARE CAMPANII */}
-                <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 2fr' : '2fr 1fr', gap: '30px', alignItems: 'start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
                   {isAdmin && (
-                      <section style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e1e4e8' }}>
-                        <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px' }}>🆕 Adaugă Campanie Nouă</h3>
+                      <section style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e1e4e8', boxSizing: 'border-box' }}>
+                        <h3 style={{ margin: '0 0 15px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', fontSize: '16px' }}>🆕 Adaugă Campanie</h3>
                         <form onSubmit={handleCreateCampaign}>
-                          <div style={{ marginBottom: '12px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>Titlu Campanie:</label>
-                            <input type="text" value={newCampTitle} onChange={(e) => setNewCampTitle(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} placeholder="Ex: Donare de Primăvară" />
+                          <div style={{ marginBottom: '10px' }}>
+                            <label style={{ display: 'block', marginBottom: '3px', fontSize: '12px', fontWeight: 'bold' }}>Titlu:</label>
+                            <input type="text" value={newCampTitle} onChange={(e) => setNewCampTitle(e.target.value)} required style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '12px' }} placeholder="Ex: Donare de Primăvară" />
                           </div>
-                          <div style={{ marginBottom: '12px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>Nume Centru / Locație:</label>
-                            <input type="text" value={newCampLocation} onChange={(e) => setNewCampLocation(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} placeholder="Ex: Sala Polivalenta" />
+                          <div style={{ marginBottom: '10px' }}>
+                            <label style={{ display: 'block', marginBottom: '3px', fontSize: '12px', fontWeight: 'bold' }}>Locație:</label>
+                            <input type="text" value={newCampLocation} onChange={(e) => setNewCampLocation(e.target.value)} required style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '12px' }} placeholder="Ex: Sala Polivalenta" />
                           </div>
-                          <div style={{ marginBottom: '12px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>Adresă Exactă:</label>
-                            <input type="text" value={newCampAddress} onChange={(e) => setNewCampAddress(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} placeholder="Ex: Str. Codrului, Nr. 12" />
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '12px' }}>
-                            <div>
-                              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>Data Început:</label>
-                              <input type="date" value={newCampDate} onChange={(e) => setNewCampDate(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>Data Sfârșit:</label>
-                              <input type="date" value={newCampEndDate} onChange={(e) => setNewCampEndDate(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                            </div>
+                          <div style={{ marginBottom: '10px' }}>
+                            <label style={{ display: 'block', marginBottom: '3px', fontSize: '12px', fontWeight: 'bold' }}>Adresă:</label>
+                            <input type="text" value={newCampAddress} onChange={(e) => setNewCampAddress(e.target.value)} required style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '12px' }} placeholder="Ex: Str. Codrului, Nr. 12" />
                           </div>
 
-                          <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
-                            <div style={{ flex: 1 }}>
-                              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>Ora Start:</label>
-                              <input type="time" value={newCampStartTime} onChange={(e) => setNewCampStartTime(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                            <div>
+                              <label style={{ display: 'block', marginBottom: '3px', fontSize: '12px', fontWeight: 'bold' }}>Data Început:</label>
+                              <input type="date" value={newCampDate} onChange={(e) => setNewCampDate(e.target.value)} required style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '12px' }} />
                             </div>
-                            <div style={{ flex: 1 }}>
-                              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>Ora Final:</label>
-                              <input type="time" value={newCampEndTime} onChange={(e) => setNewCampEndTime(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                            <div style={{ flex: 1 }}>
-                              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>Minut / Slot:</label>
-                              <input type="number" value={newCampSlotDuration} onChange={(e) => setNewCampSlotDuration(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>Capacitate / Slot:</label>
-                              <input type="number" value={newCampCapacityPerSlot} onChange={(e) => setNewCampCapacityPerSlot(e.target.value)} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+                            <div>
+                              <label style={{ display: 'block', marginBottom: '3px', fontSize: '12px', fontWeight: 'bold' }}>Data Sfârșit:</label>
+                              <input type="date" value={newCampEndDate} onChange={(e) => setNewCampEndDate(e.target.value)} required style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '12px' }} />
                             </div>
                           </div>
-                          <button type="submit" style={{ width: '100%', padding: '10px', backgroundColor: '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Publică Campania Activă</button>
+
+                          <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', marginBottom: '3px', fontSize: '12px', fontWeight: 'bold' }}>Ora Start:</label>
+                              <input type="time" value={newCampStartTime} onChange={(e) => setNewCampStartTime(e.target.value)} required style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '12px' }} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', marginBottom: '3px', fontSize: '12px', fontWeight: 'bold' }}>Ora Final:</label>
+                              <input type="time" value={newCampEndTime} onChange={(e) => setNewCampEndTime(e.target.value)} required style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '12px' }} />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', marginBottom: '3px', fontSize: '12px', fontWeight: 'bold' }}>Minut / Slot:</label>
+                              <input type="number" value={newCampSlotDuration} onChange={(e) => setNewCampSlotDuration(e.target.value)} required style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '12px' }} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', marginBottom: '3px', fontSize: '12px', fontWeight: 'bold' }}>Capacitate / Slot:</label>
+                              <input type="number" value={newCampCapacityPerSlot} onChange={(e) => setNewCampCapacityPerSlot(e.target.value)} required style={{ width: '100%', padding: '7px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '12px' }} />
+                            </div>
+                          </div>
+                          <button type="submit" style={{ width: '100%', padding: '9px', backgroundColor: '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Publică Campania</button>
                         </form>
                       </section>
                   )}
 
-                  <main style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e1e4e8' }}>
-                    <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px' }}>📍 Campanii de Donare & Istoric</h3>
+                  <main style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e1e4e8', boxSizing: 'border-box' }}>
+                    <h3 style={{ margin: '0 0 15px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', fontSize: '16px' }}>📍 Campanii de Donare</h3>
                     {displayedCampaigns.length === 0 ? (
-                        <p style={{ color: '#666', fontStyle: 'italic' }}>Momentan nu există campanii active înregistrate.</p>
+                        <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>Momentan nu există campanii active.</p>
                     ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                           {displayedCampaigns.map((camp) => (
                               <div key={camp.id} style={{
                                 border: '1px solid #e1e4e8',
                                 borderRadius: '6px',
-                                padding: '20px',
+                                padding: '15px',
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                                 backgroundColor: camp.is_active ? '#fff' : '#f8f9fa',
-                                opacity: camp.is_active ? 1 : 0.75
+                                opacity: camp.is_active ? 1 : 0.75,
+                                flexWrap: 'wrap',
+                                gap: '12px',
+                                boxSizing: 'border-box',
+                                width: '100%'
                               }}>
-                                <div style={{ flex: 1, paddingRight: '15px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <h4 style={{ margin: '0 0 8px 0', color: camp.is_active ? '#e63946' : '#6c757d', fontSize: '18px' }}>
+                                <div style={{ flex: 1, minWidth: '220px', boxSizing: 'border-box' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <h4 style={{ margin: '0 0 6px 0', color: camp.is_active ? '#e63946' : '#6c757d', fontSize: '16px', wordBreak: 'break-word' }}>
                                       {camp.title}
                                     </h4>
                                     {!camp.is_active && (
-                                        <span style={{ fontSize: '11px', backgroundColor: '#6c757d', color: 'white', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                                        <span style={{ fontSize: '10px', backgroundColor: '#6c757d', color: 'white', padding: '2px 6px', borderRadius: '3px', fontWeight: 'bold', textTransform: 'uppercase' }}>
                                 Finalizată
                               </span>
                                     )}
                                   </div>
-                                  <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#333' }}><strong>Locație:</strong> {camp.location_name}</p>
-                                  <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#666' }}><strong>Adresă:</strong> {camp.address}</p>
-                                  <div style={{ display: 'flex', gap: '15px', marginTop: '10px', fontSize: '13px', color: '#444', flexWrap: 'wrap' }}>
-                                    <span>📅 <strong>Perioadă:</strong> {formatDateRo(camp.date)}{camp.end_date && camp.end_date !== camp.date ? ` -> ${formatDateRo(camp.end_date)}` : ''}</span>
-                                    <span>🕒 <strong>Program:</strong> {formatTimeShort(camp.start_time)} - {formatTimeShort(camp.end_time)}</span>
+                                  <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#333' }}><strong>Locație:</strong> {camp.location_name}</p>
+                                  <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#666' }}><strong>Adresă:</strong> {camp.address}</p>
+                                  <div style={{ display: 'flex', gap: '10px', marginTop: '6px', fontSize: '12px', color: '#444', flexWrap: 'wrap' }}>
+                                    <span>📅 {formatDateRo(camp.date)}{camp.end_date && camp.end_date !== camp.date ? ` -> ${formatDateRo(camp.end_date)}` : ''}</span>
+                                    <span>🕒 {formatTimeShort(camp.start_time)} - {formatTimeShort(camp.end_time)}</span>
                                   </div>
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', width: '100%', maxWidth: '100%', justifyContent: 'flex-start' }}>
 
                                   {isAdmin && (
                                       <>
@@ -871,17 +862,18 @@ function Dashboard({ onLogout }) {
                                             <button
                                                 onClick={() => handleFinalizeCampaign(camp.id)}
                                                 style={{
-                                                  padding: '10px 14px',
+                                                  padding: '8px 10px',
                                                   backgroundColor: '#6c757d',
                                                   color: 'white',
                                                   border: 'none',
                                                   borderRadius: '4px',
                                                   cursor: 'pointer',
                                                   fontWeight: 'bold',
-                                                  fontSize: '13px'
+                                                  fontSize: '12px',
+                                                  flexShrink: 0
                                                 }}
                                             >
-                                              🏁 Finalizează Campania
+                                              🏁 Finalizează
                                             </button>
                                         )}
 
@@ -891,7 +883,7 @@ function Dashboard({ onLogout }) {
                                                   e.stopPropagation();
                                                   setReminderConfirmModal({ isOpen: true, campaign: camp });
                                                 }}
-                                                style={{ padding: '10px 15px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                                                style={{ padding: '8px 12px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', flexShrink: 0 }}>
                                               🔔 Reminder
                                             </button>
                                         )}
@@ -905,14 +897,15 @@ function Dashboard({ onLogout }) {
                                         if (camp.is_active) setSelectedCampaign(camp);
                                       }}
                                       style={{
-                                        padding: '10px 20px',
+                                        padding: '8px 15px',
                                         backgroundColor: camp.is_active ? '#e63946' : '#ccc',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '4px',
                                         cursor: camp.is_active ? 'pointer' : 'not-allowed',
                                         fontWeight: 'bold',
-                                        fontSize: '14px'
+                                        fontSize: '12px',
+                                        flexShrink: 0
                                       }}>
                                     {camp.is_active ? 'Programează-te' : 'Încheiată'}
                                   </button>
@@ -925,47 +918,37 @@ function Dashboard({ onLogout }) {
                   </main>
 
                   {!isAdmin && (
-                      <aside style={{ backgroundColor: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e1e4e8' }}>
-                        <h3 style={{ margin: '0 0 20px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <aside style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #e1e4e8', boxSizing: 'border-box' }}>
+                        <h3 style={{ margin: '0 0 15px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           🩸 Programările Mele & Waitlist
                         </h3>
 
                         {myAppointments.length === 0 && myWaitlist.length === 0 ? (
-                            <p style={{ color: '#666', fontStyle: 'italic', fontSize: '14px' }}>Nu aveți nicio programare sau înscriere activă.</p>
+                            <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>Nu aveți nicio programare sau înscriere activă.</p>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-                              {/* PROGRAMĂRI NORMALE (DOAR ACTIVE) */}
                               {myAppointments.map((app) => (
-                                  <div key={`app-${app.id}`} style={{ border: '1px solid #f1f3f5', borderRadius: '8px', padding: '16px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', borderLeft: '4px solid #e63946' }}>
-                                    <h4 style={{ margin: '0 0 10px 0', color: '#2b2d42', fontSize: '16px', fontWeight: 'bold', lineHeight: '1.4' }}>
+                                  <div key={`app-${app.id}`} style={{ border: '1px solid #f1f3f5', borderRadius: '6px', padding: '14px', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', borderLeft: '4px solid #e63946', boxSizing: 'border-box' }}>
+                                    <h4 style={{ margin: '0 0 8px 0', color: '#2b2d42', fontSize: '15px', fontWeight: 'bold', lineHeight: '1.3' }}>
                                       {app.campaign_title || 'Campanie de Donare'}
                                     </h4>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: '#555', marginBottom: '12px' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>👤</span>
-                                        <span>Nume: <strong>{app.donor_name} {app.donor_surname}</strong></span>
-                                      </div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>📅</span>
-                                        <span>Data: <strong>{formatDateRo(app.appointment_date || app.campaign_date || '')}</strong></span>
-                                      </div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>🕒</span>
-                                        <span>Ora: <strong style={{ color: '#e63946' }}>{formatTimeShort(app.slot_time)}</strong></span>
-                                      </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#555', marginBottom: '10px' }}>
+                                      <div>Nume: <strong>{app.donor_name} {app.donor_surname}</strong></div>
+                                      <div>Data: <strong>{formatDateRo(app.appointment_date || app.campaign_date || '')}</strong></div>
+                                      <div>Ora: <strong style={{ color: '#e63946' }}>{formatTimeShort(app.slot_time)}</strong></div>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #f8f9fa', paddingTop: '10px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #f8f9fa', paddingTop: '8px' }}>
                                       <button
                                           onClick={() => handleCancelClick(app.id)}
                                           style={{
-                                            padding: '6px 12px',
+                                            padding: '5px 10px',
                                             backgroundColor: '#fff',
                                             border: '1px solid #dc3545',
                                             color: '#dc3545',
                                             borderRadius: '4px',
                                             cursor: 'pointer',
-                                            fontSize: '12px',
+                                            fontSize: '11px',
                                             fontWeight: 'bold'
                                           }}
                                       >
@@ -975,34 +958,24 @@ function Dashboard({ onLogout }) {
                                   </div>
                               ))}
 
-                              {/* CADRANE WAITLIST (DOAR ACTIVE) */}
                               {myWaitlist.map((wait) => (
-                                  <div key={`wait-${wait.id}`} style={{ border: '1px solid #ffeeba', borderRadius: '8px', padding: '16px', backgroundColor: '#fffdf5', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', borderLeft: '4px solid #ffc107' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                      <h4 style={{ margin: 0, color: '#2b2d42', fontSize: '16px', fontWeight: 'bold', lineHeight: '1.4' }}>
+                                  <div key={`wait-${wait.id}`} style={{ border: '1px solid #ffeeba', borderRadius: '6px', padding: '14px', backgroundColor: '#fffdf5', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', borderLeft: '4px solid #ffc107', boxSizing: 'border-box' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
+                                      <h4 style={{ margin: 0, color: '#2b2d42', fontSize: '15px', fontWeight: 'bold', lineHeight: '1.3' }}>
                                         {wait.campaign_title || 'Campanie de Donare'}
                                       </h4>
-                                      <span style={{ fontSize: '11px', backgroundColor: '#fff3cd', color: '#856404', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #ffeeba' }}>
-                              Pending Waitlist ⏳
+                                      <span style={{ fontSize: '10px', backgroundColor: '#fff3cd', color: '#856404', padding: '2px 6px', borderRadius: '8px', fontWeight: 'bold', border: '1px solid #ffeeba' }}>
+                              Waitlist ⏳
                             </span>
                                     </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: '#555', marginBottom: '12px' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>👤</span>
-                                        <span>Nume: <strong>{wait.name} {wait.surname}</strong></span>
-                                      </div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>📅</span>
-                                        <span>Data Campanie: <strong>{formatDateRo(wait.campaign_date)}</strong></span>
-                                      </div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>🕒</span>
-                                        <span>Interval orar preferat: <strong style={{ color: '#856404' }}>{wait.preferred_time_range || 'Nespecificat'}</strong></span>
-                                      </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#555', marginBottom: '10px' }}>
+                                      <div>Nume: <strong>{wait.name} {wait.surname}</strong></div>
+                                      <div>Data: <strong>{formatDateRo(wait.campaign_date)}</strong></div>
+                                      <div>Interval: <strong style={{ color: '#856404' }}>{wait.preferred_time_range || 'Nespecificat'}</strong></div>
                                     </div>
 
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #fce8b2', paddingTop: '10px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #fce8b2', paddingTop: '8px' }}>
                                       <button
                                           onClick={() => {
                                             if (window.confirm('Sigur doriți să renunțați la lista de așteptare?')) {
@@ -1016,13 +989,13 @@ function Dashboard({ onLogout }) {
                                             }
                                           }}
                                           style={{
-                                            padding: '6px 12px',
+                                            padding: '5px 10px',
                                             backgroundColor: '#fff',
                                             border: '1px solid #856404',
                                             color: '#856404',
                                             borderRadius: '4px',
                                             cursor: 'pointer',
-                                            fontSize: '12px',
+                                            fontSize: '11px',
                                             fontWeight: 'bold'
                                           }}
                                       >
@@ -1042,68 +1015,65 @@ function Dashboard({ onLogout }) {
           )}
         </div>
 
-        {/* POP-UP CONFIRMARE WAITLIST */}
         {waitlistPopup.isOpen && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-              <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '10px', maxWidth: '450px', width: '90%', boxShadow: '0 4px 25px rgba(0,0,0,0.3)', textAlign: 'center', fontFamily: 'sans-serif' }}>
-                <div style={{ fontSize: '50px', marginBottom: '10px' }}>🎉</div>
-                <h3 style={{ margin: '0 0 10px 0', color: '#2b2d42' }}>Loc Liber Disponibil!</h3>
-                <p style={{ color: '#555', fontSize: '15px', lineHeight: '1.5', marginBottom: '20px' }}>
-                  S-a eliberat locul de la ora <strong style={{ color: '#e63946', fontSize: '18px' }}>{waitlistPopup.slot}</strong>. Dorești să confirmi această programare?
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '15px', boxSizing: 'border-box' }}>
+              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '10px', maxWidth: '420px', width: '100%', boxShadow: '0 4px 25px rgba(0,0,0,0.3)', textAlign: 'center', fontFamily: 'sans-serif', boxSizing: 'border-box' }}>
+                <div style={{ fontSize: '40px', marginBottom: '8px' }}>🎉</div>
+                <h3 style={{ margin: '0 0 8px 0', color: '#2b2d42', fontSize: '16px' }}>Loc Liber Disponibil!</h3>
+                <p style={{ color: '#555', fontSize: '13px', lineHeight: '1.4', marginBottom: '15px' }}>
+                  S-a eliberat locul de la ora <strong style={{ color: '#e63946', fontSize: '16px' }}>{waitlistPopup.slot}</strong>. Dorești să confirmi?
                 </p>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                   <button
                       onClick={() => handleDeclineWaitlistOffer(waitlistPopup.waitId)}
-                      style={{ padding: '10px 20px', backgroundColor: '#f1f3f5', color: '#dc3545', border: '1px solid #dc3545', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
-                    Refuză Locul
+                      style={{ padding: '8px 15px', backgroundColor: '#f1f3f5', color: '#dc3545', border: '1px solid #dc3545', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
+                    Refuză
                   </button>
                   <button
                       onClick={handleAcceptWaitlistOffer}
-                      style={{ padding: '10px 24px', backgroundColor: '#198754', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
-                    Acceptă Programarea!
+                      style={{ padding: '8px 18px', backgroundColor: '#198754', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
+                    Acceptă
                   </button>
                 </div>
               </div>
             </div>
         )}
 
-        {/* POP-UP LOC OCUPAT */}
         {occupiedPopup.isOpen && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-              <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '10px', maxWidth: '450px', width: '90%', boxShadow: '0 4px 25px rgba(0,0,0,0.3)', textAlign: 'center', fontFamily: 'sans-serif' }}>
-                <div style={{ fontSize: '50px', marginBottom: '10px' }}>⏳</div>
-                <h3 style={{ margin: '0 0 10px 0', color: '#e63946' }}>Programare Indisponibilă</h3>
-                <p style={{ color: '#555', fontSize: '15px', lineHeight: '1.5', marginBottom: '25px' }}>
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '15px', boxSizing: 'border-box' }}>
+              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '10px', maxWidth: '420px', width: '100%', boxShadow: '0 4px 25px rgba(0,0,0,0.3)', textAlign: 'center', fontFamily: 'sans-serif', boxSizing: 'border-box' }}>
+                <div style={{ fontSize: '40px', marginBottom: '8px' }}>⏳</div>
+                <h3 style={{ margin: '0 0 8px 0', color: '#e63946', fontSize: '16px' }}>Indisponibil</h3>
+                <p style={{ color: '#555', fontSize: '13px', lineHeight: '1.4', marginBottom: '20px' }}>
                   {occupiedPopup.message}
                 </p>
                 <button
                     onClick={() => setOccupiedPopup({ isOpen: false, message: '' })}
-                    style={{ padding: '10px 24px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                    style={{ padding: '8px 20px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
                   Am înțeles
                 </button>
               </div>
             </div>
         )}
 
-        {/* MODALE REMINDER */}
         {reminderConfirmModal.isOpen && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-              <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', maxWidth: '450px', width: '90%', boxShadow: '0 4px 25px rgba(0,0,0,0.2)', textAlign: 'center', fontFamily: 'sans-serif' }}>
-                <div style={{ fontSize: '40px', marginBottom: '15px' }}>🔔</div>
-                <h3 style={{ margin: '0 0 15px 0', color: '#2b2d42' }}>Confirmare Trimitere</h3>
-                <p style={{ color: '#555', fontSize: '15px', lineHeight: '1.5', marginBottom: '25px' }}>
-                  Sigur doriți să trimiteți email-uri de reminder tuturor donatorilor cu programare activă din campania: <br/>
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '15px', boxSizing: 'border-box' }}>
+              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', maxWidth: '420px', width: '100%', boxShadow: '0 4px 25px rgba(0,0,0,0.2)', textAlign: 'center', fontFamily: 'sans-serif', boxSizing: 'border-box' }}>
+                <div style={{ fontSize: '35px', marginBottom: '10px' }}>🔔</div>
+                <h3 style={{ margin: '0 0 10px 0', color: '#2b2d42', fontSize: '16px' }}>Confirmare</h3>
+                <p style={{ color: '#555', fontSize: '13px', lineHeight: '1.4', marginBottom: '20px' }}>
+                  Sigur doriți să trimiteți remindere pentru campania: <br/>
                   <strong style={{ color: '#e63946' }}>{reminderConfirmModal.campaign?.title}</strong>?
                 </p>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                   <button
                       onClick={() => setReminderConfirmModal({ isOpen: false, campaign: null })}
-                      style={{ padding: '10px 20px', backgroundColor: '#f1f3f5', color: '#333', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                      style={{ padding: '8px 15px', backgroundColor: '#f1f3f5', color: '#333', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
                     Anulează
                   </button>
                   <button
                       onClick={executeSendReminders}
-                      style={{ padding: '10px 24px', backgroundColor: '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                      style={{ padding: '8px 18px', backgroundColor: '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
                     Da, Trimite
                   </button>
                 </div>
@@ -1112,20 +1082,20 @@ function Dashboard({ onLogout }) {
         )}
 
         {reminderResultModal.isOpen && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-              <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', maxWidth: '420px', width: '90%', boxShadow: '0 4px 25px rgba(0,0,0,0.2)', textAlign: 'center', fontFamily: 'sans-serif' }}>
-                <div style={{ fontSize: '45px', marginBottom: '15px' }}>
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '15px', boxSizing: 'border-box' }}>
+              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', maxWidth: '400px', width: '100%', boxShadow: '0 4px 25px rgba(0,0,0,0.2)', textAlign: 'center', fontFamily: 'sans-serif', boxSizing: 'border-box' }}>
+                <div style={{ fontSize: '35px', marginBottom: '10px' }}>
                   {reminderResultModal.isSuccess ? '✔️' : '❌'}
                 </div>
-                <h3 style={{ margin: '0 0 12px 0', color: reminderResultModal.isSuccess ? '#198754' : '#dc3545' }}>
-                  {reminderResultModal.isSuccess ? 'Operațiune Reușită' : 'Eroare la solicitare'}
+                <h3 style={{ margin: '0 0 10px 0', color: reminderResultModal.isSuccess ? '#198754' : '#dc3545', fontSize: '16px' }}>
+                  {reminderResultModal.isSuccess ? 'Reușită' : 'Eroare'}
                 </h3>
-                <p style={{ color: '#555', fontSize: '14px', lineHeight: '1.5', marginBottom: '25px' }}>
+                <p style={{ color: '#555', fontSize: '13px', lineHeight: '1.4', marginBottom: '20px' }}>
                   {reminderResultModal.message}
                 </p>
                 <button
                     onClick={() => setReminderResultModal({ isOpen: false, isSuccess: true, message: '' })}
-                    style={{ padding: '9px 25px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                    style={{ padding: '8px 20px', backgroundColor: '#2b2d42', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
                   Închide
                 </button>
               </div>
@@ -1135,7 +1105,7 @@ function Dashboard({ onLogout }) {
         {showProfileModal && (
             <ProfileModal
                 user={currentUser}
-                myAppointments={myAppointmentsRaw} // <-- Trimitem datele COMPLETE (inclusiv din campanii închise)
+                myAppointments={myAppointmentsRaw}
                 onClose={() => setShowProfileModal(false)}
                 onUserUpdated={(updatedUser) => setCurrentUser(updatedUser)}
             />
@@ -1182,13 +1152,13 @@ function Dashboard({ onLogout }) {
         )}
 
         {appointmentToCancel && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1500 }}>
-              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.15)' }}>
-                <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Confirmare Anulare</h4>
-                <p style={{ color: '#666', fontSize: '15px', marginBottom: '20px' }}>Sigur doriți anularea definitivă a acestei programări?</p>
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1500, padding: '15px', boxSizing: 'border-box' }}>
+              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', maxWidth: '380px', width: '100%', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.15)', boxSizing: 'border-box' }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#333', fontSize: '16px' }}>Confirmare Anulare</h4>
+                <p style={{ color: '#666', fontSize: '13px', marginBottom: '20px' }}>Sigur doriți anularea definitivă a acestei programări?</p>
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                  <button onClick={() => setAppointmentToCancel(null)} style={{ padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}>Renunță</button>
-                  <button onClick={executeCancel} style={{ padding: '8px 16px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Da, anulează</button>
+                  <button onClick={() => setAppointmentToCancel(null)} style={{ padding: '8px 14px', backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Renunță</button>
+                  <button onClick={executeCancel} style={{ padding: '8px 14px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Da, anulează</button>
                 </div>
               </div>
             </div>

@@ -35,7 +35,6 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 IS_PRODUCTION = os.getenv("ENV", "development") == "production"
 
-# Înlocuiește cu Google Client ID-ul tău din Google Cloud Console
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "TĂU_CLIENT_ID_DIN_GOOGLE_CONSOLE.apps.googleusercontent.com")
 
 failed_login_tracker = {}
@@ -526,8 +525,32 @@ class UserUpdatePayload(BaseModel):
             raise ValueError("Numărul de telefon trebuie să aibă exact 10 cifre și să înceapă cu 07.")
         return v
 
+@router.put("/users/{user_id}", response_model=UserOut)
+def update_user_profile_by_id(
+    user_id: int,
+    payload: UserUpdatePayload,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Utilizatorul nu a fost găsit.")
+
+    # Doar utilizatorul în sine sau un admin poate modifica profilul
+    if current_user.id != target_user.id and current_user.role != UserRole.ADMIN and str(current_user.role).lower() != 'admin':
+        raise HTTPException(status_code=403, detail="Nu aveți permisiunea de a modifica acest profil.")
+
+    target_user.name = payload.name.strip()
+    target_user.surname = payload.surname.strip()
+    target_user.phone = payload.phone.strip()
+    target_user.blood_group = payload.blood_group.strip()
+
+    db.commit()
+    db.refresh(target_user)
+    return target_user
+
 @router.put("/users/me", response_model=UserOut)
-def update_user_profile(
+def update_user_profile_me(
     payload: UserUpdatePayload, 
     current_user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)

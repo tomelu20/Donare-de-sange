@@ -146,17 +146,16 @@ function Login({ onSwitch, onLoginSuccess }) {
   };
 
   return (
-      <div style={{ maxWidth: '400px', margin: '80px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'sans-serif', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+      <div style={{ maxWidth: '400px', width: '90%', margin: '40px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'sans-serif', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', boxSizing: 'border-box' }}>
 
         {viewMode === 'login' ? (
             <>
-              <h2 style={{ textAlign: 'center', color: '#e63946' }}>Autentificare</h2>
+              <h2 style={{ textAlign: 'center', color: '#e63946', fontSize: '20px' }}>Autentificare</h2>
 
-              {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', textAlign: 'center' }}>{success}</p>}
-              {error && <p style={{ color: 'red', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px' }}>{error}</p>}
+              {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', textAlign: 'center', fontSize: '13px' }}>{success}</p>}
+              {error && <p style={{ color: 'red', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '13px' }}>{error}</p>}
 
-              {/* BUTONUL GOOGLE */}
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px', marginTop: '10px', width: '100%', overflow: 'hidden' }}>
                 <GoogleLogin
                     onSuccess={handleGoogleSuccess}
                     onError={() => setError('Autentificarea cu Google a eșuat.')}
@@ -168,15 +167,15 @@ function Login({ onSwitch, onLoginSuccess }) {
                 />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#aaa', margin: '15px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#aaa', margin: '12px 0' }}>
                 <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
-                <span style={{ padding: '0 10px', fontSize: '13px' }}>sau cu email</span>
+                <span style={{ padding: '0 10px', fontSize: '12px' }}>sau cu email</span>
                 <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
               </div>
 
               <form onSubmit={handleLogin}>
-                <div style={{ marginBottom: '15px' }}>
-                  <label htmlFor="email-input" style={{ display: 'block', marginBottom: '5px' }}>Email:</label>
+                <div style={{ marginBottom: '12px' }}>
+                  <label htmlFor="email-input" style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Email:</label>
                   <input
                       id="email-input"
                       type="email"
@@ -185,12 +184,12 @@ function Login({ onSwitch, onLoginSuccess }) {
                       required
                       autoComplete="email"
                       disabled={loading}
-                      style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }}
                   />
                 </div>
 
-                <div style={{ marginBottom: '10px' }}>
-                  <label htmlFor="password-input" style={{ display: 'block', marginBottom: '5px' }}>Parolă:</label>
+                <div style={{ marginBottom: '8px' }}>
+                  <label htmlFor="password-input" style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Parolă:</label>
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <input
                         id="password-input"
@@ -200,21 +199,20 @@ function Login({ onSwitch, onLoginSuccess }) {
                         required
                         autoComplete="current-password"
                         disabled={loading}
-                        style={{ width: '100%', padding: '8px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                        style={{ width: '100%', padding: '8px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }}
                     />
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        title={showPassword ? 'Ascunde parola' : 'Arată parola'}
                         style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: '#666' }}
                     >
                       {showPassword ? (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
                           </svg>
                       ) : (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                             <line x1="1" y1="1" x2="23" y2="23"></line>
                           </svg>
@@ -223,11 +221,11 @@ function Login({ onSwitch, onLoginSuccess }) {
                   </div>
                 </div>
 
-                <div style={{ textAlign: 'right', marginBottom: '15px' }}>
+                <div style={{ textAlign: 'right', marginBottom: '12px' }}>
                   <button
                       type="button"
                       onClick={() => { setViewMode('forgot'); setError(''); setSuccess(''); }}
-                      style={{ background: 'none', border: 'none', color: '#666', fontSize: '13px', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+                      style={{ background: 'none', border: 'none', color: '#666', fontSize: '12px', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
                   >
                     Ai uitat parola?
                   </button>
@@ -244,32 +242,33 @@ function Login({ onSwitch, onLoginSuccess }) {
                       border: 'none',
                       borderRadius: '4px',
                       cursor: loading ? 'not-allowed' : 'pointer',
-                      fontSize: '16px'
+                      fontSize: '14px',
+                      fontWeight: 'bold'
                     }}
                 >
                   {loading ? 'Se procesează...' : 'Intră în cont'}
                 </button>
               </form>
 
-              <p style={{ textAlign: 'center', marginTop: '15px', fontSize: '14px' }}>
+              <p style={{ textAlign: 'center', marginTop: '15px', fontSize: '13px' }}>
                 Nu ai cont? <button onClick={onSwitch} type="button" style={{ background: 'none', border: 'none', color: '#e63946', cursor: 'pointer', fontWeight: 'bold', padding: 0, font: 'inherit' }}>Înregistrează-te</button>
               </p>
             </>
         ) : (
             <>
-              <h2 style={{ textAlign: 'center', color: '#e63946', marginBottom: '10px' }}>Resetare Parolă</h2>
-              <p style={{ textAlign: 'center', fontSize: '13px', color: '#666', marginBottom: '20px' }}>
+              <h2 style={{ textAlign: 'center', color: '#e63946', marginBottom: '8px', fontSize: '18px' }}>Resetare Parolă</h2>
+              <p style={{ textAlign: 'center', fontSize: '12px', color: '#666', marginBottom: '15px' }}>
                 {forgotStep === 1
                     ? 'Introdu adresa de email pentru a primi codul de resetare.'
                     : 'Introdu codul primit pe email și noua parolă.'}
               </p>
 
-              {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', marginBottom: '15px', textAlign: 'center' }}>{success}</p>}
+              {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '8px', borderRadius: '4px', marginBottom: '12px', textAlign: 'center', fontSize: '12px' }}>{success}</p>}
 
               {forgotStep === 1 ? (
                   <form onSubmit={handleSendForgotCode}>
-                    <div style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px' }}>Email:</label>
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Email:</label>
                       <input
                           type="email"
                           value={forgotEmail}
@@ -277,22 +276,22 @@ function Login({ onSwitch, onLoginSuccess }) {
                           required
                           placeholder="nume@gmail.com"
                           disabled={loading}
-                          style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                          style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }}
                       />
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        style={{ width: '100%', padding: '10px', backgroundColor: loading ? '#ccc' : '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '16px' }}
+                        style={{ width: '100%', padding: '9px', backgroundColor: loading ? '#ccc' : '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: 'bold' }}
                     >
                       {loading ? 'Se trimite...' : 'Trimite cod de resetare'}
                     </button>
                   </form>
               ) : (
                   <form onSubmit={handleResetPassword}>
-                    <div style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px' }}>Cod de resetare (6 cifre):</label>
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Cod de resetare (6 cifre):</label>
                       <input
                           type="text"
                           maxLength={6}
@@ -301,12 +300,12 @@ function Login({ onSwitch, onLoginSuccess }) {
                           required
                           placeholder="123456"
                           disabled={loading}
-                          style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '4px', fontWeight: 'bold' }}
+                          style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '3px', fontWeight: 'bold', fontSize: '14px' }}
                       />
                     </div>
 
-                    <div style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px' }}>Parolă nouă:</label>
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>Parolă nouă:</label>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                         <input
                             type={showNewPassword ? 'text' : 'password'}
@@ -315,21 +314,20 @@ function Login({ onSwitch, onLoginSuccess }) {
                             required
                             placeholder="••••••••"
                             disabled={loading}
-                            style={{ width: '100%', padding: '8px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '8px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '13px' }}
                         />
                         <button
                             type="button"
                             onClick={() => setShowNewPassword(!showNewPassword)}
-                            title={showNewPassword ? 'Ascunde parola' : 'Arată parola'}
                             style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: '#666' }}
                         >
                           {showNewPassword ? (
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                               </svg>
                           ) : (
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                                 <line x1="1" y1="1" x2="23" y2="23"></line>
                               </svg>
@@ -341,7 +339,7 @@ function Login({ onSwitch, onLoginSuccess }) {
                     <button
                         type="submit"
                         disabled={loading}
-                        style={{ width: '100%', padding: '10px', backgroundColor: loading ? '#ccc' : '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '16px' }}
+                        style={{ width: '100%', padding: '9px', backgroundColor: loading ? '#ccc' : '#e63946', color: 'white', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: 'bold' }}
                     >
                       {loading ? 'Se resetează...' : 'Resetează parola'}
                     </button>
@@ -349,16 +347,16 @@ function Login({ onSwitch, onLoginSuccess }) {
               )}
 
               {error && (
-                  <div style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '14px', marginTop: '12px', textAlign: 'center', border: '1px solid #f5c6cb' }}>
+                  <div style={{ color: '#d90429', backgroundColor: '#ffe3e3', padding: '8px', borderRadius: '4px', fontSize: '13px', marginTop: '10px', textAlign: 'center', border: '1px solid #f5c6cb' }}>
                     {error}
                   </div>
               )}
 
-              <div style={{ textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ textAlign: 'center', marginTop: '15px' }}>
                 <button
                     type="button"
                     onClick={() => { setViewMode('login'); setForgotStep(1); setError(''); setSuccess(''); }}
-                    style={{ background: 'none', border: 'none', color: '#e63946', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'bold', fontSize: '14px' }}
+                    style={{ background: 'none', border: 'none', color: '#e63946', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'bold', fontSize: '13px' }}
                 >
                   ← Înapoi la Autentificare
                 </button>
