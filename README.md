@@ -1,107 +1,148 @@
-# 🩸 Platformă Smart pentru Donare de Sânge - Ghidul Utilizatorului (User Guide)
+# Platformă pentru donarea de sânge
 
-O aplicație web modernă, intuitivă și eficientă creată pentru a simplifica procesul de programare la donarea de sânge, gestionarea campaniilor medicale și oferirea de suport inteligent în timp real prin intermediul unui asistent AI dedicat (**Don AI**).
+Aplicație web pentru organizarea campaniilor de donare, gestionarea programărilor și comunicarea dintre donatori și administratori. Proiectul include o interfață React, un API FastAPI și o bază de date Microsoft SQL Server.
 
----
+## Funcționalități
 
-## 📋 Cuprins
+- Înregistrare și autentificare cu verificarea adresei de e-mail; autentificare Google este disponibilă în interfață.
+- Listarea campaniilor și rezervarea unui interval disponibil, inclusiv înscrierea unei alte persoane.
+- Chestionar de eligibilitate configurabil, prezentat în fluxul de programare.
+- Listă de așteptare cu interval preferat și timp estimat de deplasare; administratorii pot gestiona ofertele.
+- Panou administrativ pentru campanii, programări, participanți, întrebări de eligibilitate și notificări.
+- Actualizarea profilului și consultarea istoricului relevant pentru donator.
+- Asistentul Don AI, bazat pe Google Gemini, pentru întrebări despre donare și campaniile active.
+- Notificări prin e-mail și sarcină periodică pentru expirarea ofertelor din lista de așteptare.
 
-1. [Prezentare Generală](#-prezentare-generală)
-2. [Funcționalități Cheie](#-funcționalități-cheie)
-3. [Ghid de Utilizare: Rolul Donator](#-ghid-de-utilizare-rolul-donator)
-4. [Ghid de Utilizare: Rolul Administrator](#-ghid-de-utilizare-rolul-administrator)
-5. [Asistentul Virtual Don AI](#-asistentul-virtual-don-ai)
-6. [Ghid de Instalare și Rulare](#-ghid-de-instalare-și-rulare)
-7. [Tehnologii Utilizate](#-tehnologii-utilizate)
+## Tehnologii
 
----
+| Componentă | Tehnologii |
+| --- | --- |
+| Frontend | React 19, Vite, React Router, Axios, Lucide, React Markdown |
+| Backend | Python, FastAPI, SQLAlchemy, Pydantic Settings |
+| Bază de date | Microsoft SQL Server |
+| Servicii opționale | Google Gemini, Google OAuth, SMTP/Gmail |
 
-## 🌟 Prezentare Generală
+## Structura proiectului
 
-Proiectul rezolvă problemele clasice de organizare ale centrelor de donare: aglomerația, lipsa de verificare a eligibilității în prealabil și comunicarea anevoioasă cu donatorii. Prin integrarea unui **sistem de sloturi orare**, a unui **chestionar de eligibilitate dinamic**, a unei **liste de așteptare (Waitlist)** și a unui **Chatbot bazat pe LLM (Don AI)**, platforma optimizează fluxul de donatori și îmbunătățește rata de participare.
+```text
+.
+├── backend/
+│   ├── main.py                 # Aplicația FastAPI și configurarea routerelor
+│   ├── config.py               # Setările backend-ului
+│   ├── database.py             # Conexiunea SQLAlchemy
+│   ├── models.py               # Modelele bazei de date
+│   ├── routers/                # Autentificare, campanii, programări etc.
+│   ├── schemas/                # Schemele API/Pydantic
+│   ├── tables.sql              # Script de inițializare a bazei de date
+│   └── *.sql                   # Scripturi SQL pentru modificări și date
+├── frontend/
+│   ├── src/                    # Componentele și paginile React
+│   ├── package.json
+│   └── vite.config.js
+├── ARCHITECTURE.md             # Note arhitecturale existente
+└── README.md
+```
 
----
+## Cerințe
 
-## 🔥 Funcționalități Cheie
+- Git
+- Node.js și npm (versiune compatibilă cu Vite 8; Node.js 20.19+ sau 22.12+)
+- Python 3.10+
+- Microsoft SQL Server și un driver ODBC compatibil instalat pe sistem
+- Opțional: cont/API key Google Gemini, credențiale SMTP/Gmail și configurarea clientului Google OAuth
 
-- 🔐 **Autentificare și Verificare Email:** Înregistrare securizată prin cod de confirmare transmis pe email (OTP).
-- 📅 **Programări pe Sloturi Orare:** Vizualizarea capacității în timp real per interval orar.
-- 👨‍👩‍👧 **Programare pentru Terți:** Posibilitatea de a programa un prieten sau o rudă, specificând datele de contact și grupa sanguină.
-- 📋 **Chestionar Dinamic de Eligibilitate:** Formular interactiv (checkbox, radio DA/NU, introducere valori numerice) obligatoriu înainte de rezervare.
-- ⏳ **Waitlist Inteligent:** Înscriere pe lista de așteptare în cazul în care sloturile sunt epuizate, cu specificarea timpului de deplasare și a intervalului preferat.
-- 🔔 **Sistem de Remindere:** Trimitere notificări prin email pentru campaniile active.
-- 🤖 **Asistent Virtual Don AI:** Chatbot integrat cu interfață intuitivă, suport Markdown și mecanism de protecție (Cooldown/Rate Limiting).
-- 🛡️ **Panou Administrativ Avansat:** Centralizator de programări, gestiune reprezentanți, creare de campanii și administrare chestionare.
+## Instalare și rulare locală
 
----
+### 1. Obțineți proiectul
 
-## 👤 Ghid de Utilizare: Rolul Donator
+```bash
+git clone https://github.com/tomelu20/Donare-de-sange.git
+cd Donare-de-sange
+```
 
-### 1. Creare Cont și Autentificare
-1. Deschideți aplicația și selectați **Înregistrează-te**.
-2. Completați numele, prenumele, numărul de telefon, grupa sanguină și adresa de email.
-3. Apăsați pe **Trimite cod** și introduceți codul din 6 cifre primit pe email.
-4. După ce apare mesajul `✓ Email Verificat`, setați parola și finalizați înregistrarea.
+### 2. Pregătiți baza de date
 
-### 2. Rezervarea unei Programări
-1. În **Dashboard**, consultați lista de *Campanii de Donare Active*.
-2. Apăsați butonul **Programează-te** din dreptul campaniei dorite.
-3. Completați **Formularul de Eligibilitate** (răspundeți la întrebările medicale/criteriile afișate).
-4. *(Opțional)* Bifați căsuța **Programează pentru altcineva** dacă doriți să înregistrați un membru al familiei sau un prieten.
-5. Selectați ziua și intervalul orar dorit dintre sloturile disponibile.
-6. Apăsați **Confirmă Rezervarea**.
+Creați/configurați o bază Microsoft SQL Server și aplicați schema necesară din scripturile `backend/*.sql`. `backend/tables.sql` șterge și recreează baza de date `donare`; rulați-l numai într-un mediu local/de test și verificați conținutul înainte de utilizare. Scripturile de modificare a schemei trebuie aplicate în ordinea potrivită bazei de date existente.
 
-### 3. Înscrierea în Lista de Așteptare (Waitlist)
-Dacă sloturile orare dorite sunt complet ocupate:
-1. În modalul de programare, apăsați pe **Înscriere Waitlist**.
-2. Specificați intervalul orar preferat și timpul necesar pentru deplasare până la centru.
-3. Confirmați înscrierea. Administratorii vă vor contacta sau aloca direct la eliberarea unui loc.
+### 3. Configurați și porniți backend-ul
 
----
+```powershell
+cd backend
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install fastapi "uvicorn[standard]" sqlalchemy pydantic-settings python-dotenv apscheduler slowapi google-genai google-auth python-jose passlib[bcrypt] "pydantic[email]" pyodbc
+```
 
-## 🛠️ Ghid de Utilizare: Rolul Administrator
+Creați `backend/.env` cu valorile locale corespunzătoare mediului dumneavoastră:
 
-Dacă vă autentificați cu un cont ce deține rolul de `ADMIN`, panoul principal vă pune la dispoziție instrumente speciale de gestiune:
+```dotenv
+DATABASE_URL=sqlalchemy-url-pentru-sql-server
+SECRET_KEY=generati-o-cheie-lunga-si-aleatoare
+ALGORITHM=HS256
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+GEMINI_API_KEY=
+EMAIL_USER=
+EMAIL_PASSWORD=
+GOOGLE_CLIENT_ID=
+```
 
-1. **Centralizator Management Programări:**
-   - Vizualizați toate rezervările din sistem.
-   - Marcați statusul donatorului când ajunge la centru: **Prezent ✓** sau **Absent ✗**.
-   - Anulați programările care nu mai sunt valabile.
+`DATABASE_URL`, `SECRET_KEY`, `ALGORITHM`, `CORS_ORIGINS` și `GEMINI_API_KEY` sunt setările backend definite în `backend/config.py`. Configurați URL-ul SQLAlchemy și driverul ODBC conform instalării SQL Server. Datele SMTP sunt necesare pentru e-mailurile de verificare/reminder, iar cheia Gemini și clientul Google sunt necesare pentru funcționalitățile respective. Nu folosiți valorile-placeholder de mai sus în producție și nu publicați chei sau parole.
 
-2. **Management Listă de Așteptare (Waitlist):**
-   - Vizualizați doritorii din waitlist, timpul de deplasare și intervalul lor preferat.
-   - Apăsați **Asignează** pentru a le aloca manual un slot orar disponibil.
+Rulați API-ul din directorul `backend`:
 
-3. **Management Chestionar Eligibilitate:**
-   - Adăugați întrebări noi configurând tipul de răspuns (Căsuță de bifat, Opțiune DA/NU, Valoare Numerică).
-   - Ștergeți criteriile de eligibilitate învechite.
+```powershell
+uvicorn main:app --reload
+```
 
-4. **Creare Campanie Nouă:**
-   - Completați titlul, locația, adresa exactă, perioada (data început/sfârșit), programul (oră start/final), durata unui slot (minute) și capacitatea per slot.
+API-ul este disponibil implicit la `http://127.0.0.1:8000`; documentația interactivă Swagger este la `http://127.0.0.1:8000/docs`.
 
-5. **Notificări & Remindere:**
-   - Folosiți butonul 🔔 **Trimite Reminder** din dreptul fiecărei campanii pentru a notifica automat toți donatorii confirmați.
+### 4. Instalați și porniți frontend-ul
 
----
+Într-un terminal nou, din rădăcina proiectului:
 
-## 🤖 Asistentul Virtual Don AI
+```powershell
+cd frontend
+npm install
+```
 
-În colțul din dreapta-jos al ecranului este disponibil **Don AI**, asistentul inteligent pregătit să răspundă la întrebări despre donarea de sânge.
+Frontend-ul folosește implicit `http://127.0.0.1:8000` ca adresă API. Pentru o adresă diferită, creați `frontend/.env.local`:
 
-- **Suport Markdown:** Răspunsurile sunt structurate clar (liste, text îngroșat, sublinieri).
-- **Sistem Cooldown (Rate Limiting):** Dacă trimiteți mesaje prea repede sau atingeți limita de tokeni alocați, widgetul activează un cronometru de așteptare pentru protecția serverului backend.
+```dotenv
+VITE_API_URL=http://127.0.0.1:8000
+```
 
----
+Porniți serverul de dezvoltare:
 
-## ⚙️ Ghid de Instalare și Rulare
+```powershell
+npm run dev
+```
 
-### Cerințe Preliminare
-- **Node.js** (v16 sau mai nou)
-- **npm** sau **yarn**
-- Backend-ul **FastAPI** rulat local la adresa `http://127.0.0.1:8000`
+Deschideți adresa indicată de Vite (implicit `http://localhost:5173`). Pentru un build de producție sau verificarea regulilor Oxlint:
 
-### Pași de Instalare
-1. Clonați depozitul direct pe calculatorul dumneavoastră:
-   ```bash
-   git clone [https://github.com/utilizator/donare-sange-frontend.git](https://github.com/utilizator/donare-sange-frontend.git)
-   cd donare-sange-frontend
+```powershell
+npm run build
+npm run lint
+```
+
+## Utilizarea aplicației
+
+**Donatori:** creați un cont sau autentificați-vă, selectați o campanie, completați chestionarul și alegeți un slot disponibil. Dacă nu sunt locuri, vă puteți înscrie pe lista de așteptare. Din dashboard puteți gestiona programările și profilul.
+
+**Administratori:** conturile cu rol `admin` au acces la administrarea campaniilor, programărilor și listei de așteptare, configurarea întrebărilor de eligibilitate și trimiterea reminderelor.
+
+**Don AI:** asistentul poate răspunde la întrebări generale și poate consulta campaniile active. Răspunsurile sale nu înlocuiesc evaluarea personalului medical sau criteriile oficiale de eligibilitate.
+
+## Note pentru dezvoltare
+
+- Configurația API frontend este `VITE_API_URL`; schimbările acesteia necesită repornirea serverului Vite.
+- Backend-ul citește setările din variabilele de mediu și din `backend/.env`.
+- API-ul folosește CORS; includeți origin-ul frontend-ului în `CORS_ORIGINS`.
+- Backend-ul pornește un job de fundal care verifică periodic ofertele expirate de pe lista de așteptare.
+- În acest moment proiectul nu include un fișier backend `requirements.txt`; comenzile de instalare de mai sus instalează pachetele importate de backend.
+- Fișierele SQL din `backend` includ scripturi de schemă, actualizări și seed-uri. Revizuiți-le înainte de rulare, în special pe baze de date cu date existente.
+
+## Documentație suplimentară
+
+- [Documentație arhitecturală](ARCHITECTURE.md)
+- [Sursa backend-ului](backend/)
+- [Sursa frontend-ului](frontend/)
