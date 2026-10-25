@@ -62,7 +62,9 @@ cd Donare-de-sange
 
 ### 2. Pregătiți baza de date
 
-Creați/configurați o bază Microsoft SQL Server și aplicați schema necesară din scripturile `backend/*.sql`. `backend/tables.sql` șterge și recreează baza de date `donare`; rulați-l numai într-un mediu local/de test și verificați conținutul înainte de utilizare. Scripturile de modificare a schemei trebuie aplicate în ordinea potrivită bazei de date existente.
+Rulați `backend/setup.sql` în SQL Server Management Studio sau cu `sqlcmd`. Scriptul creează baza `donare` numai dacă aceasta nu există, creează tabelele lipsă și aplică migrările de schemă peste tabelele existente. Poate fi rulat din nou și nu șterge baza, tabele sau rânduri. Are nevoie de permisiuni SQL Server pentru crearea bazei de date atunci când aceasta nu există și pentru modificarea schemei.
+
+Scriptul păstrează datele existente; dacă găsește stări de programare neașteptate, oprește migrarea și revine asupra modificărilor tranzacționale, în loc să le șteargă. Scripturile SQL mai vechi rămân în director ca referință, dar nu trebuie rulate ca parte a configurării standard: unele șterg date, recreează baza sau modifică utilizatori/date exemplu. `setup.sql` nu creează un cont administrator și nu adaugă campanii sau întrebări de eligibilitate implicite.
 
 ### 3. Configurați și porniți backend-ul
 
@@ -139,7 +141,7 @@ npm run lint
 - API-ul folosește CORS; includeți origin-ul frontend-ului în `CORS_ORIGINS`.
 - Backend-ul pornește un job de fundal care verifică periodic ofertele expirate de pe lista de așteptare.
 - În acest moment proiectul nu include un fișier backend `requirements.txt`; comenzile de instalare de mai sus instalează pachetele importate de backend.
-- Fișierele SQL din `backend` includ scripturi de schemă, actualizări și seed-uri. Revizuiți-le înainte de rulare, în special pe baze de date cu date existente.
+- Folosiți `backend/setup.sql` pentru schema unificată. Fișierele SQL vechi sunt păstrate separat și pot conține operații distructive ori date exemplu.
 
 ## Documentație suplimentară
 
