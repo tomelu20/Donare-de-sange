@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 import AppointmentModal from './AppointmentModal';
 import WaitlistModal from './WaitlistModal';
 import AIChatbox from './AIChatbox';
@@ -229,6 +230,44 @@ function Dashboard({ onLogout }) {
     setCurrentPage(1);
   }, [searchQuery, selectedCampaignFilter, selectedStatusFilter]);
 
+  const handleExportExcel = () => {
+    if (!filteredAppointments || filteredAppointments.length === 0) {
+      alert("Nu există date de exportat conform filtrelor actuale!");
+      return;
+    }
+
+    const dataToExport = filteredAppointments.map((app, index) => ({
+      "Nr. Crt": index + 1,
+      "Nume Donator": `${app.donor_name || ''} ${app.donor_surname || ''}`.trim(),
+      "Telefon": app.donor_phone || '',
+      "Campanie": app.campaign_title || '',
+      "Dată Campanie": app.campaign_date || '',
+      "Ora Slot": app.slot_time ? app.slot_time.substring(0, 5) : '',
+      "Status": app.status === 'confirmed' ? 'Confirmată' : app.status === 'attended' ? 'Prezent' : 'Absent',
+      "Observații": app.notes || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    const colWidths = [
+      { wch: 8 },  // Nr. Crt
+      { wch: 25 }, // Nume Donator
+      { wch: 15 }, // Telefon
+      { wch: 35 }, // Campanie
+      { wch: 15 }, // Dată Campanie
+      { wch: 10 }, // Ora Slot
+      { wch: 12 }, // Status
+      { wch: 25 }  // Observații
+    ];
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Programări");
+
+    const currentDateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Programari_Donare_${currentDateStr}.xlsx`);
+  };
+
   const handleFinalizeCampaign = async (campId) => {
     if (!window.confirm('Sigur doriți să finalizați această campanie? Această acțiune este ireversibilă.')) return;
     try {
@@ -447,9 +486,30 @@ function Dashboard({ onLogout }) {
                     <>
                       <section style={{ backgroundColor: 'white', padding: '15px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #e1e4e8', boxSizing: 'border-box' }}>
 
-                        <h3 style={{ margin: '0 0 15px 0', color: '#2b2d42', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', fontSize: '16px' }}>
-                          📋 Management Programări
-                        </h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f1f3f5', paddingBottom: '8px', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                          <h3 style={{ margin: 0, color: '#2b2d42', fontSize: '16px' }}>
+                            📋 Management Programări
+                          </h3>
+                          
+                          <button
+                            onClick={handleExportExcel}
+                            style={{
+                              padding: '6px 14px',
+                              backgroundColor: '#198754',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontWeight: 'bold',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            📥 Exportă în Excel (.xlsx)
+                          </button>
+                        </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '15px', backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '6px', border: '1px solid #eee', boxSizing: 'border-box' }}>
 
