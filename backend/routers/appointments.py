@@ -484,7 +484,7 @@ def get_all_appointments_for_admin(
             a.id AS appointment_id,
             a.slot_time,
             a.status,
-            a.appointment_date AS campaign_date, 
+            COALESCE(a.appointment_date, c.date) AS appointment_date, 
             a.notes,
             CASE 
                 WHEN a.is_for_someone_else = 1 THEN a.guest_name 
@@ -498,6 +498,10 @@ def get_all_appointments_for_admin(
                 WHEN a.is_for_someone_else = 1 THEN a.guest_phone 
                 ELSE u.phone 
             END AS donor_phone,
+            CASE 
+                WHEN a.is_for_someone_else = 1 THEN COALESCE(a.guest_email, u.email) 
+                ELSE u.email 
+            END AS donor_email,
             c.title AS campaign_title
         FROM appointments a
         JOIN users u ON a.user_id = u.id
@@ -591,7 +595,7 @@ def get_donor_history(
             a.id AS appointment_id,
             a.slot_time,
             a.status,
-            a.appointment_date AS campaign_date, 
+            COALESCE(a.appointment_date, c.date) AS appointment_date, 
             a.notes,
             c.title AS campaign_title
         FROM appointments a
@@ -609,7 +613,7 @@ def get_donor_history(
             "appointment_id": r["appointment_id"],
             "slot_time": str(r["slot_time"])[:5] if r["slot_time"] else "",
             "status": r["status"],
-            "campaign_date": str(r["campaign_date"]) if r["campaign_date"] else "",
+            "appointment_date": str(r["appointment_date"]) if r["appointment_date"] else "",
             "notes": r["notes"],
             "campaign_title": r["campaign_title"]
         })

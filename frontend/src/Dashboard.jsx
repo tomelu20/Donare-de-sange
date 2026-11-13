@@ -240,8 +240,9 @@ function Dashboard({ onLogout }) {
       "Nr. Crt": index + 1,
       "Nume Donator": `${app.donor_name || ''} ${app.donor_surname || ''}`.trim(),
       "Telefon": app.donor_phone || '',
+      "Email": app.donor_email || app.user_email || app.email || '',
       "Campanie": app.campaign_title || '',
-      "Dată Campanie": app.campaign_date || '',
+      "Dată Programare": formatDateRo(app.appointment_date || app.campaign_date || app.date || ''),
       "Ora Slot": app.slot_time ? app.slot_time.substring(0, 5) : '',
       "Status": app.status === 'confirmed' ? 'Confirmată' : app.status === 'attended' ? 'Prezent' : 'Absent',
       "Observații": app.notes || ''
@@ -253,8 +254,9 @@ function Dashboard({ onLogout }) {
       { wch: 8 },  // Nr. Crt
       { wch: 25 }, // Nume Donator
       { wch: 15 }, // Telefon
+      { wch: 28 }, // Email
       { wch: 35 }, // Campanie
-      { wch: 15 }, // Dată Campanie
+      { wch: 18 }, // Dată Programare
       { wch: 10 }, // Ora Slot
       { wch: 12 }, // Status
       { wch: 25 }  // Observații
@@ -588,7 +590,7 @@ function Dashboard({ onLogout }) {
                                             {app.campaign_title}
                                           </td>
                                           <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
-                                            {formatDateRo(app.campaign_date)} | <strong style={{ color: '#e63946' }}>{formatTimeShort(app.slot_time)}</strong>
+                                            {formatDateRo(app.appointment_date || app.campaign_date || '')} | <strong style={{ color: '#e63946' }}>{formatTimeShort(app.slot_time)}</strong>
                                           </td>
                                           <td style={{ padding: '10px' }}>
                                     <span style={{
