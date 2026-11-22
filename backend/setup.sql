@@ -30,6 +30,7 @@ BEGIN TRY
             email VARCHAR(100) NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
             blood_group VARCHAR(10) NOT NULL CONSTRAINT DF_users_blood_group DEFAULT ('Nu știu'),
+            notify_campaigns BIT NOT NULL CONSTRAINT DF_users_notify_campaigns DEFAULT (0),
             role VARCHAR(50) NOT NULL CONSTRAINT DF_users_role DEFAULT ('user'),
             CONSTRAINT UQ_users_email UNIQUE (email),
             CONSTRAINT CK_users_role CHECK (role IN ('user', 'admin'))
@@ -137,6 +138,10 @@ BEGIN TRY
         Bring older installations up to date. New columns are nullable or have
         defaults so existing rows remain valid and are not removed.
     */
+    IF COL_LENGTH(N'dbo.users', N'notify_campaigns') IS NULL
+        ALTER TABLE dbo.users ADD notify_campaigns BIT NOT NULL
+            CONSTRAINT DF_users_notify_campaigns DEFAULT (0) WITH VALUES;
+
     IF COL_LENGTH(N'dbo.campaigns', N'end_date') IS NULL
     BEGIN
         ALTER TABLE dbo.campaigns ADD end_date DATE NULL;

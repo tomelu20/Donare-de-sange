@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import * as XLSX from 'xlsx';
+import { API_BASE_URL } from './apiConfig';
 import AppointmentModal from './AppointmentModal';
 import WaitlistModal from './WaitlistModal';
 import AIChatbox from './AIChatbox';
@@ -66,41 +66,36 @@ function Dashboard({ onLogout }) {
   const [newCampSlotDuration, setNewCampSlotDuration] = useState('15');
   const [newCampCapacityPerSlot, setNewCampCapacityPerSlot] = useState('2');
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!currentUser) return;
     try {
       setLoading(true);
       setApiError('');
 
-      const token = sessionStorage.getItem('access_token');
-      if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      }
-
-      const campaignsRes = await axios.get('http://127.0.0.1:8000/campaigns/');
+      const campaignsRes = await axios.get(`${API_BASE_URL}/campaigns/`);
       setCampaigns(campaignsRes.data);
 
-      const questionsRes = await axios.get('http://127.0.0.1:8000/eligibility/questions');
+      const questionsRes = await axios.get(`${API_BASE_URL}/eligibility/questions`);
       setEligibilityQuestions(questionsRes.data);
 
-      const myAppsRes = await axios.get('http://127.0.0.1:8000/appointments/me');
+      const myAppsRes = await axios.get(`${API_BASE_URL}/appointments/me`);
       setMyAppointmentsRaw(myAppsRes.data);
 
       try {
-        const waitlistRes = await axios.get('http://127.0.0.1:8000/waitlist/me');
+        const waitlistRes = await axios.get(`${API_BASE_URL}/waitlist/me`);
         setMyWaitlistRaw(waitlistRes.data.filter(w => w.status === 'waiting' || w.status === 'notified'));
       } catch {
         setMyWaitlistRaw([]);
       }
 
       if (currentUser.role === 'admin' || currentUser.role === 'ADMIN') {
-        const adminAppsRes = await axios.get('http://127.0.0.1:8000/appointments/all');
+        const adminAppsRes = await axios.get(`${API_BASE_URL}/appointments/all`);
         setAdminAppointments(adminAppsRes.data);
 
-        const adminWaitlistRes = await axios.get('http://127.0.0.1:8000/waitlist/all');
+        const adminWaitlistRes = await axios.get(`${API_BASE_URL}/waitlist/all`);
         setAdminWaitlist(adminWaitlistRes.data);
 
-        const topDonorsRes = await axios.get('http://127.0.0.1:8000/appointments/top-donors');
+        const topDonorsRes = await axios.get(`${API_BASE_URL}/appointments/top-donors`);
         setTopDonors(topDonorsRes.data);
       }
     } catch (err) {
@@ -108,7 +103,7 @@ function Dashboard({ onLogout }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
 
   const activeCampaignIds = new Set(campaigns.filter(c => c.is_active).map(c => c.id));
   const activeCampaignTitles = new Set(campaigns.filter(c => c.is_active).map(c => c.title));
@@ -149,7 +144,7 @@ function Dashboard({ onLogout }) {
     const slot = params.get('slot');
 
     if (isWaitlistOffer === 'true' && waitId && slot) {
-      axios.get(`http://127.0.0.1:8000/waitlist/${waitId}/check-offer?slot_time=${slot}:00`)
+      axios.get(`${API_BASE_URL}/waitlist/${waitId}/check-offer?slot_time=${slot}:00`)
           .then(res => {
             if (res.data.available && !res.data.already_accepted) {
               setWaitlistPopup({
@@ -173,11 +168,11 @@ function Dashboard({ onLogout }) {
 
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [fetchData]);
 
   const handleAcceptWaitlistOffer = async () => {
     try {
-      const res = await axios.post(`http://127.0.0.1:8000/waitlist/${waitlistPopup.waitId}/assign?slot_time=${waitlistPopup.slot}:00`);
+      const res = await axios.post(`${API_BASE_URL}/waitlist/${waitlistPopup.waitId}/assign?slot_time=${waitlistPopup.slot}:00`);
       setSuccessNotification(res.data.message || 'Programarea ta a fost confirmată cu succes!');
       setWaitlistPopup({ isOpen: false, waitId: null, slot: '' });
       fetchData();
@@ -193,7 +188,7 @@ function Dashboard({ onLogout }) {
 
   const handleDeclineWaitlistOffer = async (waitId) => {
     try {
-      const res = await axios.post(`http://127.0.0.1:8000/appointments/waitlist/decline?wait_id=${waitId}`);
+      const res = await axios.post(`${API_BASE_URL}/appointments/waitlist/decline?wait_id=${waitId}`);
       setSuccessNotification(res.data.message || 'Ai refuzat locul. A fost notificată următoarea persoană.');
       setWaitlistPopup({ isOpen: false, waitId: null, slot: '' });
       fetchData();
@@ -230,12 +225,15 @@ function Dashboard({ onLogout }) {
     setCurrentPage(1);
   }, [searchQuery, selectedCampaignFilter, selectedStatusFilter]);
 
-  const handleExportExcel = () => {
-    if (!filteredAppointments || filteredAppointments.length === 0) {
+  const handleExportExcel = async () => {
+    const activeWaitlist = adminWaitlist.filter(wait => activeCampaignIds.has(wait.campaign_id));
+
+    if (filteredAppointments.length === 0 && activeWaitlist.length === 0) {
       alert("Nu există date de exportat conform filtrelor actuale!");
       return;
     }
 
+    const XLSX = await import('xlsx');
     const dataToExport = filteredAppointments.map((app, index) => ({
       "Nr. Crt": index + 1,
       "Nume Donator": `${app.donor_name || ''} ${app.donor_surname || ''}`.trim(),
@@ -249,6 +247,26 @@ function Dashboard({ onLogout }) {
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const waitlistRows = activeWaitlist.map((wait, index) => [
+      index + 1,
+      `${wait.name || ''} ${wait.surname || ''}`.trim(),
+      wait.phone || '',
+      wait.email || '',
+      wait.campaign_title || '',
+      formatDateRo(wait.campaign_date || ''),
+      wait.preferred_time_range || '',
+      wait.travel_time_minutes == null ? '' : `${wait.travel_time_minutes} min`,
+      wait.status === 'waiting' ? 'În așteptare' :
+        wait.status === 'notified' ? 'Notificat' :
+          wait.status === 'accepted' ? 'Asignat' :
+            (wait.status === 'declined' || wait.status === 'expired') ? 'Refuzat' : wait.status
+    ]);
+
+    XLSX.utils.sheet_add_aoa(worksheet, [
+      ['Listă de Așteptare'],
+      ['Nr. Crt', 'Nume Donator', 'Telefon', 'Email', 'Campanie', 'Dată Campanie', 'Interval Preferat', 'Deplasare', 'Status'],
+      ...waitlistRows
+    ], { origin: `A${dataToExport.length + 3}` });
 
     const colWidths = [
       { wch: 8 },  // Nr. Crt
@@ -256,10 +274,10 @@ function Dashboard({ onLogout }) {
       { wch: 15 }, // Telefon
       { wch: 28 }, // Email
       { wch: 35 }, // Campanie
-      { wch: 18 }, // Dată Programare
-      { wch: 10 }, // Ora Slot
-      { wch: 12 }, // Status
-      { wch: 25 }  // Observații
+      { wch: 18 }, // Dată Programare / Dată Campanie
+      { wch: 20 }, // Ora Slot / Interval Preferat
+      { wch: 12 }, // Status / Deplasare
+      { wch: 25 }  // Observații / Status
     ];
     worksheet['!cols'] = colWidths;
 
@@ -270,10 +288,20 @@ function Dashboard({ onLogout }) {
     XLSX.writeFile(workbook, `Programari_Donare_${currentDateStr}.xlsx`);
   };
 
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${API_BASE_URL}/auth/logout`);
+      sessionStorage.removeItem('user_session');
+      onLogout();
+    } catch {
+      setApiError('Nu s-a putut încheia sesiunea. Încearcă din nou.');
+    }
+  };
+
   const handleFinalizeCampaign = async (campId) => {
     if (!window.confirm('Sigur doriți să finalizați această campanie? Această acțiune este ireversibilă.')) return;
     try {
-      const res = await axios.put(`http://127.0.0.1:8000/campaigns/${campId}/toggle-status`);
+      const res = await axios.put(`${API_BASE_URL}/campaigns/${campId}/toggle-status`);
       setSuccessNotification(res.data.message || 'Campania a fost finalizată.');
       fetchData();
       setTimeout(() => setSuccessNotification(''), 3000);
@@ -286,14 +314,14 @@ function Dashboard({ onLogout }) {
     e.preventDefault();
     if (!newQuestionText.trim()) return;
     try {
-      await axios.post('http://127.0.0.1:8000/eligibility/questions', {
+      await axios.post(`${API_BASE_URL}/eligibility/questions`, {
         question_text: newQuestionText,
         type: newQuestionType
       });
       setSuccessNotification('Întrebarea a fost adăugată cu succes!');
       setNewQuestionText('');
 
-      const questionsRes = await axios.get('http://127.0.0.1:8000/eligibility/questions');
+      const questionsRes = await axios.get(`${API_BASE_URL}/eligibility/questions`);
       setEligibilityQuestions(questionsRes.data);
       setTimeout(() => setSuccessNotification(''), 3000);
     } catch {
@@ -304,10 +332,10 @@ function Dashboard({ onLogout }) {
   const handleDeleteQuestion = async (questionId) => {
     if (!window.confirm('Sigur doriți să ștergeți această întrebare?')) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/eligibility/questions/${questionId}`);
+      await axios.delete(`${API_BASE_URL}/eligibility/questions/${questionId}`);
       setSuccessNotification('Întrebarea a fost ștearsă cu succes!');
 
-      const questionsRes = await axios.get('http://127.0.0.1:8000/eligibility/questions');
+      const questionsRes = await axios.get(`${API_BASE_URL}/eligibility/questions`);
       setEligibilityQuestions(questionsRes.data);
       setTimeout(() => setSuccessNotification(''), 3000);
     } catch {
@@ -325,7 +353,7 @@ function Dashboard({ onLogout }) {
     }
 
     try {
-      await axios.post('http://127.0.0.1:8000/campaigns/', {
+      await axios.post(`${API_BASE_URL}/campaigns/`, {
         title: newCampTitle,
         location_name: newCampLocation,
         address: newCampAddress,
@@ -363,7 +391,7 @@ function Dashboard({ onLogout }) {
   const executeCancel = async () => {
     if (!appointmentToCancel) return;
     try {
-      await axios.put(`http://127.0.0.1:8000/appointments/${appointmentToCancel}/cancel`);
+      await axios.put(`${API_BASE_URL}/appointments/${appointmentToCancel}/cancel`);
       setSuccessNotification('Programarea a fost anulată cu succes.');
       setAppointmentToCancel(null);
       fetchData();
@@ -376,7 +404,7 @@ function Dashboard({ onLogout }) {
 
   const handleMarkAttendance = async (appId) => {
     try {
-      await axios.put(`http://127.0.0.1:8000/appointments/${appId}/attend`);
+      await axios.put(`${API_BASE_URL}/appointments/${appId}/attend`);
       setSuccessNotification('Donatorul a fost marcat ca Prezent.');
       fetchData();
       setTimeout(() => setSuccessNotification(''), 3000);
@@ -387,7 +415,7 @@ function Dashboard({ onLogout }) {
 
   const handleMarkNoShow = async (appId) => {
     try {
-      await axios.put(`http://127.0.0.1:8000/appointments/${appId}/noshow`);
+      await axios.put(`${API_BASE_URL}/appointments/${appId}/noshow`);
       setSuccessNotification('Donatorul a fost marcat ca Absent.');
       fetchData();
       setTimeout(() => setSuccessNotification(''), 3000);
@@ -425,7 +453,7 @@ function Dashboard({ onLogout }) {
     setReminderConfirmModal({ isOpen: false, campaign: null });
 
     try {
-      const response = await axios.post(`http://127.0.0.1:8000/reminders/campaign/${camp.id}`);
+      const response = await axios.post(`${API_BASE_URL}/reminders/campaign/${camp.id}`);
       setReminderResultModal({
         isOpen: true,
         isSuccess: true,
@@ -468,7 +496,7 @@ function Dashboard({ onLogout }) {
                 {isAdmin ? 'Admin' : 'Donator'}
               </span>
                 </div>
-                <button onClick={onLogout} style={{ padding: '6px 12px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>
+                <button onClick={handleLogout} style={{ padding: '6px 12px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>
                   Ieșire
                 </button>
               </div>
@@ -739,14 +767,14 @@ function Dashboard({ onLogout }) {
                                       <td style={{ padding: '10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                         <button
                                             onClick={() => handleAssignWaitlist(wait.id, wait.campaign_id, wait.campaign_title)}
-                                            disabled={wait.status === 'accepted'}
+                                            disabled={['accepted', 'declined', 'expired'].includes(wait.status)}
                                             style={{
                                               padding: '5px 10px',
-                                              backgroundColor: wait.status === 'accepted' ? '#ccc' : '#e63946',
+                                              backgroundColor: ['accepted', 'declined', 'expired'].includes(wait.status) ? '#ccc' : '#e63946',
                                               color: 'white',
                                               border: 'none',
                                               borderRadius: '4px',
-                                              cursor: wait.status === 'accepted' ? 'not-allowed' : 'pointer',
+                                              cursor: ['accepted', 'declined', 'expired'].includes(wait.status) ? 'not-allowed' : 'pointer',
                                               fontSize: '11px',
                                               fontWeight: 'bold'
                                             }}
@@ -1041,7 +1069,7 @@ function Dashboard({ onLogout }) {
                                       <button
                                           onClick={() => {
                                             if (window.confirm('Sigur doriți să renunțați la lista de așteptare?')) {
-                                              axios.delete(`http://127.0.0.1:8000/waitlist/${wait.id}`)
+                                              axios.delete(`${API_BASE_URL}/waitlist/${wait.id}`)
                                                   .then(() => {
                                                     setSuccessNotification('Ai ieșit din lista de așteptare.');
                                                     fetchData();

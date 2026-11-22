@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -6,10 +8,10 @@ from pydantic import BaseModel
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os
 import urllib.parse
 from datetime import datetime, timedelta
 
+from config import settings
 from database import get_db
 from schemas.schemas import QuestionOut, AppointmentWithAnswersCreate, AppointmentOut
 from routers.auth import get_current_user, require_admin
@@ -19,8 +21,9 @@ router = APIRouter(
     prefix="/eligibility",
     tags=["Eligibility Questionnaire"]
 )
+logger = logging.getLogger(__name__)
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = settings.FRONTEND_URL
 
 def format_date_ro(date_str: str) -> str:
     """Convertește data din YYYY-MM-DD în DD.MM.YYYY"""
@@ -31,8 +34,8 @@ def format_date_ro(date_str: str) -> str:
         return str(date_str)
 
 def send_appointment_confirmation_email(to_email: str, donor_name: str, campaign_title: str, location_name: str, address: str, appointment_date: str, slot_time: str):
-    email_user = os.getenv("EMAIL_USER")
-    email_password = os.getenv("EMAIL_PASSWORD")
+    email_user = settings.EMAIL_USER
+    email_password = settings.EMAIL_PASSWORD
     
     if not email_user or not email_password:
         return
@@ -313,11 +316,12 @@ def submit_appointment_with_answers(
             "created_at": row["created_at"]
         }
 
-    except Exception as e:
+    except Exception:
         db.rollback()
+        logger.exception("Could not save appointment eligibility answers.")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Eroare la salvarea programării și a chestionarului: {str(e)}"
+            detail="Nu s-a putut salva programarea și chestionarul."
         )
 
 @router.post("/questions", status_code=status.HTTP_201_CREATED)
@@ -354,9 +358,12 @@ def delete_question(
             
         return {"message": "Întrebarea și răspunsurile asociate au fost șterse cu succes!"}
         
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         db.rollback()
+        logger.exception("Could not delete an eligibility question.")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Eroare la ștergerea întrebării: {str(e)}"
+            detail="Nu s-a putut șterge întrebarea."
         )

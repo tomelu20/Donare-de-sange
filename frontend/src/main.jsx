@@ -1,16 +1,20 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import axios from 'axios'
 import './index.css'
 import App from './App.jsx'
 import { GoogleOAuthProvider } from '@react-oauth/google'
+import { GOOGLE_CLIENT_ID } from './apiConfig'
 
-// Înlocuiește cu Google Client ID-ul tău din Google Cloud Console
-const GOOGLE_CLIENT_ID = "TĂU_CLIENT_ID_DIN_GOOGLE_CONSOLE.apps.googleusercontent.com";
+axios.defaults.withCredentials = true;
+sessionStorage.removeItem('access_token');
+
+const app = GOOGLE_CLIENT_ID
+    ? <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}><App /></GoogleOAuthProvider>
+    : <App />;
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
-        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-            <App />
-        </GoogleOAuthProvider>
+        {app}
     </StrictMode>,
 )

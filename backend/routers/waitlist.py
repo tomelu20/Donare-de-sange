@@ -1,16 +1,19 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime, timedelta
 from database import get_db
 from schemas.schemas import WaitlistCreate, WaitlistOut
-from routers.auth import get_current_user, require_admin
+from routers.auth import ensure_owner_or_admin, get_current_user, is_admin, require_admin
 from models import User
 
 router = APIRouter(
     prefix="/waitlist",
     tags=["Waitlist"]
 )
+logger = logging.getLogger(__name__)
 
 @router.post("/", response_model=WaitlistOut, status_code=status.HTTP_201_CREATED)
 def add_to_waitlist(
@@ -79,11 +82,12 @@ def add_to_waitlist(
         row = result.mappings().first()
         db.commit()
         return row
-    except Exception as e:
+    except Exception:
         db.rollback()
+        logger.exception("Could not save a waitlist entry.")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Eroare la salvarea în baza de date: {str(e)}"
+            detail="Nu s-a putut salva înscrierea în lista de așteptare."
         )
 
 @router.get("/all", status_code=status.HTTP_200_OK)
@@ -113,9 +117,15 @@ def get_all_waitlist_for_admin(
 
 
 @router.get("/{id}/check-offer", status_code=status.HTTP_200_OK)
-def check_waitlist_offer(id: int, slot_time: str, db: Session = Depends(get_db)):
+def check_waitlist_offer(
+    id: int,
+    slot_time: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     query = text("""
-        SELECT w.id, w.status, w.notified_at, w.campaign_id, c.date AS campaign_date, c.capacity_per_slot
+        SELECT w.id, w.user_id, w.status, w.notified_at, w.offered_slot_time, w.campaign_id,
+               c.date AS campaign_date, c.capacity_per_slot
         FROM waitlist w
         JOIN campaigns c ON w.campaign_id = c.id
         WHERE w.id = :wait_id
@@ -125,8 +135,24 @@ def check_waitlist_offer(id: int, slot_time: str, db: Session = Depends(get_db))
     if not offer:
         raise HTTPException(status_code=404, detail="Oferta nu mai există.")
 
+    ensure_owner_or_admin(offer.user_id, current_user)
+
     if offer.status == 'accepted':
         return {"available": True, "already_accepted": True, "message": "Ai confirmat deja această programare."}
+
+    if offer.status != 'notified' or not offer.notified_at or not offer.offered_slot_time:
+        return {
+            "available": False,
+            "reason": "inactive",
+            "message": "Nu există o ofertă activă pentru această înscriere."
+        }
+
+    if not is_admin(current_user) and str(offer.offered_slot_time)[:5] != str(slot_time)[:5]:
+        return {
+            "available": False,
+            "reason": "invalid_slot",
+            "message": "Oferta este valabilă pentru alt interval orar."
+        }
 
     if offer.notified_at:
         now = datetime.now()
@@ -164,9 +190,14 @@ def check_waitlist_offer(id: int, slot_time: str, db: Session = Depends(get_db))
 
 
 @router.post("/{id}/assign", status_code=status.HTTP_200_OK)
-def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depends(get_db)):
+def assign_waitlist_to_appointment(
+    id: int,
+    slot_time: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     wait_query = text("""
-        SELECT w.campaign_id, w.user_id, w.status, w.notified_at, c.date AS campaign_date, c.capacity_per_slot 
+        SELECT w.campaign_id, w.user_id, w.status, w.notified_at, w.offered_slot_time, c.date AS campaign_date, c.capacity_per_slot
         FROM waitlist w
         JOIN campaigns c ON w.campaign_id = c.id
         WHERE w.id = :wait_id
@@ -176,8 +207,26 @@ def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depend
     if not wait_entry:
         raise HTTPException(status_code=404, detail="Înregistrarea din lista de așteptare nu există.")
 
+    ensure_owner_or_admin(wait_entry.user_id, current_user)
+
     if wait_entry.status == 'accepted':
         raise HTTPException(status_code=400, detail="Ai confirmat deja această ofertă din lista de așteptare!")
+
+    if not is_admin(current_user) and (
+        wait_entry.status != 'notified'
+        or not wait_entry.notified_at
+        or not wait_entry.offered_slot_time
+    ):
+        raise HTTPException(status_code=400, detail="Nu există o ofertă activă pentru această înscriere.")
+
+    if is_admin(current_user) and wait_entry.status not in ('waiting', 'notified'):
+        raise HTTPException(status_code=400, detail="Această înscriere nu mai poate fi asignată.")
+
+    if (
+        not is_admin(current_user)
+        and str(wait_entry.offered_slot_time)[:5] != str(slot_time)[:5]
+    ):
+        raise HTTPException(status_code=400, detail="Oferta este valabilă pentru alt interval orar.")
 
     if wait_entry.notified_at:
         now = datetime.now()
@@ -236,9 +285,10 @@ def assign_waitlist_to_appointment(id: int, slot_time: str, db: Session = Depend
         db.commit()
         return {"message": "Programarea ta a fost confirmată cu succes!"}
         
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Eroare la procesarea asignării: {str(e)}")
+        logger.exception("Could not assign a waitlist offer.")
+        raise HTTPException(status_code=500, detail="Nu s-a putut confirma programarea din lista de așteptare.")
 
 @router.get("/me", status_code=status.HTTP_200_OK)
 def get_my_waitlist(
@@ -265,3 +315,33 @@ def get_my_waitlist(
     """)
     result = db.execute(query, {"user_id": current_user.id}).mappings().all()
     return result
+
+@router.delete("/{id}", status_code=status.HTTP_200_OK)
+def leave_waitlist(
+    id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    entry = db.execute(
+        text("SELECT user_id, campaign_id, status, offered_slot_time FROM waitlist WHERE id = :wait_id"),
+        {"wait_id": id}
+    ).fetchone()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Înregistrarea din lista de așteptare nu există.")
+
+    ensure_owner_or_admin(entry.user_id, current_user)
+
+    if entry.status in ("accepted", "expired", "declined"):
+        raise HTTPException(status_code=400, detail="Această înscriere nu mai poate fi anulată.")
+
+    db.execute(
+        text("UPDATE waitlist SET status = 'declined' WHERE id = :wait_id"),
+        {"wait_id": id}
+    )
+    db.commit()
+
+    if entry.status == "notified" and entry.offered_slot_time:
+        from routers.appointments import notify_next_in_waitlist
+        notify_next_in_waitlist(entry.campaign_id, str(entry.offered_slot_time), None, db)
+
+    return {"message": "Ai ieșit din lista de așteptare."}

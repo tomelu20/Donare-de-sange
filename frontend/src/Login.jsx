@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
-
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://127.0.0.1:8000';
+import { API_BASE_URL, GOOGLE_AUTH_ENABLED } from './apiConfig';
 
 function Login({ onSwitch, onLoginSuccess }) {
   const [viewMode, setViewMode] = useState('login');
@@ -38,11 +37,6 @@ function Login({ onSwitch, onLoginSuccess }) {
 
       sessionStorage.setItem('user_session', JSON.stringify(response.data.user));
 
-      if (response.data.access_token) {
-        sessionStorage.setItem('access_token', response.data.access_token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-      }
-
       if (onLoginSuccess) {
         onLoginSuccess();
       }
@@ -68,11 +62,6 @@ function Login({ onSwitch, onLoginSuccess }) {
       );
 
       sessionStorage.setItem('user_session', JSON.stringify(response.data.user));
-
-      if (response.data.access_token) {
-        sessionStorage.setItem('access_token', response.data.access_token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-      }
 
       if (onLoginSuccess) {
         onLoginSuccess();
@@ -155,23 +144,27 @@ function Login({ onSwitch, onLoginSuccess }) {
               {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '10px', borderRadius: '4px', textAlign: 'center', fontSize: '13px' }}>{success}</p>}
               {error && <p style={{ color: 'red', backgroundColor: '#ffe3e3', padding: '10px', borderRadius: '4px', fontSize: '13px' }}>{error}</p>}
 
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px', marginTop: '10px', width: '100%', overflow: 'hidden' }}>
-                <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => setError('Autentificarea cu Google a eșuat.')}
-                    useOneTap
-                    theme="outline"
-                    shape="rectangular"
-                    text="continue_with"
-                    locale="ro"
-                />
-              </div>
+              {GOOGLE_AUTH_ENABLED && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px', marginTop: '10px', width: '100%', overflow: 'hidden' }}>
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => setError('Autentificarea cu Google a eșuat.')}
+                        useOneTap
+                        theme="outline"
+                        shape="rectangular"
+                        text="continue_with"
+                        locale="ro"
+                    />
+                  </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#aaa', margin: '12px 0' }}>
-                <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
-                <span style={{ padding: '0 10px', fontSize: '12px' }}>sau cu email</span>
-                <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
-              </div>
+                  <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#aaa', margin: '12px 0' }}>
+                    <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
+                    <span style={{ padding: '0 10px', fontSize: '12px' }}>sau cu email</span>
+                    <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
+                  </div>
+                </>
+              )}
 
               <form onSubmit={handleLogin}>
                 <div style={{ marginBottom: '12px' }}>

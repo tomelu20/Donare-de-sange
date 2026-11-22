@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from './apiConfig';
 
 function DonorNotesModal({ donor, onClose, onNotesUpdated }) {
   const [notesHistory, setNotesHistory] = useState([]);
@@ -9,24 +10,24 @@ function DonorNotesModal({ donor, onClose, onNotesUpdated }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const fetchNotesHistory = async () => {
+  const fetchNotesHistory = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await axios.get(`http://127.0.0.1:8000/appointments/donor-history?phone=${encodeURIComponent(donor.donor_phone)}`);
+      const response = await axios.get(`${API_BASE_URL}/appointments/donor-history?phone=${encodeURIComponent(donor.donor_phone)}`);
       setNotesHistory(response.data);
-    } catch (err) {
+    } catch {
       setError('Nu s-a putut încărca istoricul observațiilor medicale.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [donor?.donor_phone]);
 
   useEffect(() => {
     if (donor && donor.donor_phone) {
       fetchNotesHistory();
     }
-  }, [donor]);
+  }, [donor, fetchNotesHistory]);
 
   const handleAddNote = async (e) => {
     e.preventDefault();
@@ -38,7 +39,7 @@ function DonorNotesModal({ donor, onClose, onNotesUpdated }) {
 
     try {
       const appId = donor.appointment_id || donor.id;
-      await axios.put(`http://127.0.0.1:8000/appointments/${appId}/notes`, {
+      await axios.put(`${API_BASE_URL}/appointments/${appId}/notes`, {
         notes: newNote
       });
 
@@ -48,7 +49,7 @@ function DonorNotesModal({ donor, onClose, onNotesUpdated }) {
 
       if (onNotesUpdated) onNotesUpdated();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
+    } catch {
       setError('Eroare la salvarea observației.');
     } finally {
       setSaving(false);

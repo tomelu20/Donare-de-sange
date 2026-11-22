@@ -6,13 +6,13 @@ from pydantic import BaseModel
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os
 import urllib.parse
 from datetime import datetime, timedelta
 
+from config import settings
 from database import get_db, SessionLocal
 from schemas.schemas import AppointmentCreate, AppointmentOut
-from routers.auth import get_current_user, require_admin
+from routers.auth import ensure_owner_or_admin, get_current_user, require_admin
 from models import User
 
 router = APIRouter(
@@ -20,7 +20,7 @@ router = APIRouter(
     tags=["Appointments"]
 )
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = settings.FRONTEND_URL
 
 def format_date_ro(date_str: str) -> str:
     """Convertește data din YYYY-MM-DD în DD.MM.YYYY"""
@@ -32,8 +32,8 @@ def format_date_ro(date_str: str) -> str:
 
 
 def send_appointment_cancellation_email(to_email: str, donor_name: str, campaign_title: str, appointment_date: str, slot_time: str):
-    email_user = os.getenv("EMAIL_USER")
-    email_password = os.getenv("EMAIL_PASSWORD")
+    email_user = settings.EMAIL_USER
+    email_password = settings.EMAIL_PASSWORD
     
     if not email_user or not email_password:
         return
@@ -78,8 +78,8 @@ def send_appointment_cancellation_email(to_email: str, donor_name: str, campaign
 
 
 def send_waitlist_notification_email(to_email: str, donor_name: str, campaign_title: str, slot_time: str, waitlist_id: int, time_limit_hours: int):
-    email_user = os.getenv("EMAIL_USER")
-    email_password = os.getenv("EMAIL_PASSWORD")
+    email_user = settings.EMAIL_USER
+    email_password = settings.EMAIL_PASSWORD
     
     if not email_user or not email_password:
         return
@@ -376,9 +376,14 @@ def create_appointment(
     }
 
 @router.put("/{id}/cancel", status_code=status.HTTP_200_OK)
-def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def cancel_appointment(
+    id: int,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     app_query = text("""
-        SELECT a.campaign_id, a.slot_time, a.appointment_date, a.is_for_someone_else, a.guest_name, a.guest_surname,
+        SELECT a.user_id, a.campaign_id, a.slot_time, a.appointment_date, a.is_for_someone_else, a.guest_name, a.guest_surname,
                u.email AS user_email, u.name AS user_name, u.surname AS user_surname, c.title AS campaign_title, a.status
         FROM appointments a
         JOIN campaigns c ON a.campaign_id = c.id
@@ -389,6 +394,8 @@ def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session =
     
     if not app_row:
         raise HTTPException(status_code=404, detail="Programarea nu a fost găsită.")
+
+    ensure_owner_or_admin(app_row.user_id, current_user)
 
     if app_row.status == 'cancelled':
         return {"message": "Programarea era deja anulată."}
@@ -423,12 +430,21 @@ def cancel_appointment(id: int, background_tasks: BackgroundTasks, db: Session =
 
 
 @router.post("/waitlist/decline", status_code=status.HTTP_200_OK)
-def decline_waitlist_offer(wait_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    wait_query = text("SELECT campaign_id, offered_slot_time FROM waitlist WHERE id = :w_id")
+def decline_waitlist_offer(
+    wait_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    wait_query = text("SELECT user_id, campaign_id, offered_slot_time, status FROM waitlist WHERE id = :w_id")
     wait_entry = db.execute(wait_query, {"w_id": wait_id}).fetchone()
 
     if not wait_entry:
         raise HTTPException(status_code=404, detail="Înregistrarea din lista de așteptare nu există.")
+
+    ensure_owner_or_admin(wait_entry.user_id, current_user)
+    if wait_entry.status != "notified":
+        raise HTTPException(status_code=400, detail="Nu există o ofertă activă de refuzat.")
 
     db.execute(text("UPDATE waitlist SET status = 'declined' WHERE id = :w_id"), {"w_id": wait_id})
     db.commit()
@@ -562,7 +578,10 @@ def noshow_appointment(
     return {"message": "Donatorul a fost marcat ca absent."}
 
 @router.get("/top-donors", status_code=status.HTTP_200_OK)
-def get_top_donors(db: Session = Depends(get_db)):
+def get_top_donors(
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
     query = text("""
         SELECT TOP 10 
             donor_name AS name,

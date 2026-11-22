@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+import logging
+
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
-import os
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime, timedelta
@@ -10,12 +11,14 @@ from typing import List, Optional
 
 from config import settings 
 from database import get_db
-from models import Campaign
+from models import Campaign, User
+from routers.auth import get_current_user, limiter
 
 router = APIRouter(
     prefix="/ai",
     tags=["AI Assistant"]
 )
+logger = logging.getLogger(__name__)
 
 class MessageItem(BaseModel):
     sender: str  # 'user' sau 'ai'
@@ -25,13 +28,18 @@ class ChatRequest(BaseModel):
     message: str
     history: Optional[List[MessageItem]] = []
 
-gemini_key = settings.GEMINI_API_KEY if hasattr(settings, "GEMINI_API_KEY") else os.getenv("GEMINI_API_KEY", "")
-gemini_key = gemini_key.strip() if gemini_key else ""
+gemini_key = settings.GEMINI_API_KEY.strip()
 
 client = genai.Client(api_key=gemini_key) if gemini_key else None
 
 @router.post("/chat", status_code=status.HTTP_200_OK)
-def chat_with_assistant(payload: ChatRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def chat_with_assistant(
+    request: Request,
+    payload: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     if not client:
         return {
             "reply": "Asistentul AI este momentan dezactivat. Verificați variabila GEMINI_API_KEY din fișierul .env."
@@ -198,9 +206,9 @@ def chat_with_assistant(payload: ChatRequest, db: Session = Depends(get_db)):
 
         return {"reply": response.text}
         
-    except Exception as e:
-        print(f"\n!!! EROARE GEMINI DETALIATĂ: {str(e)}\n")
+    except Exception:
+        logger.exception("AI provider request failed.")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=f"Eroare la comunicarea cu motorul LLM: {str(e)}"
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Asistentul AI nu este disponibil momentan."
         )

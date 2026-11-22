@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
-
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://127.0.0.1:8000';
+import { API_BASE_URL, GOOGLE_AUTH_ENABLED } from './apiConfig';
 
 function Register({ onSwitch, onRegisterSuccess }) {
   const [name, setName] = useState('');
@@ -55,11 +54,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
       );
 
       sessionStorage.setItem('user_session', JSON.stringify(response.data.user));
-
-      if (response.data.access_token) {
-        sessionStorage.setItem('access_token', response.data.access_token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-      }
 
       if (onRegisterSuccess) {
         onRegisterSuccess();
@@ -156,11 +150,6 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
       sessionStorage.setItem('user_session', JSON.stringify(response.data.user));
 
-      if (response.data.access_token) {
-        sessionStorage.setItem('access_token', response.data.access_token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-      }
-
       setSuccess('Contul a fost creat cu succes! Te redirecționăm...');
 
       setName('');
@@ -195,23 +184,27 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
         {success && <p style={{ color: '#2b9348', backgroundColor: '#e3ffe3', padding: '8px', borderRadius: '4px', fontSize: '12px', marginBottom: '12px' }}>{success}</p>}
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px', marginTop: '8px', width: '100%', overflow: 'hidden' }}>
-          <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError('Înregistrarea cu Google a eșuat.')}
-              useOneTap
-              theme="outline"
-              shape="rectangular"
-              text="signup_with"
-              locale="ro"
-          />
-        </div>
+        {GOOGLE_AUTH_ENABLED && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px', marginTop: '8px', width: '100%', overflow: 'hidden' }}>
+              <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Înregistrarea cu Google a eșuat.')}
+                  useOneTap
+                  theme="outline"
+                  shape="rectangular"
+                  text="signup_with"
+                  locale="ro"
+              />
+            </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#aaa', margin: '12px 0' }}>
-          <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
-          <span style={{ padding: '0 10px', fontSize: '12px' }}>sau cu email</span>
-          <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', textAlign: 'center', color: '#aaa', margin: '12px 0' }}>
+              <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
+              <span style={{ padding: '0 10px', fontSize: '12px' }}>sau cu email</span>
+              <div style={{ flex: 1, borderBottom: '1px solid #ddd' }}></div>
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleRegister}>
           <div style={{ marginBottom: '12px' }}>
@@ -392,7 +385,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
                   style={{ marginTop: '2px', cursor: 'pointer', width: '15px', height: '15px', flexShrink: 0 }}
               />
               <label htmlFor="terms-checkbox" style={{ fontSize: '12px', color: '#333', lineHeight: '1.3', cursor: 'pointer' }}>
-                Sunt de acord cu{' '}
+                Am citit{' '}
                 <button
                     type="button"
                     onClick={() => setShowTermsModal(true)}
@@ -415,7 +408,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
                   style={{ marginTop: '2px', cursor: 'pointer', width: '15px', height: '15px', flexShrink: 0 }}
               />
               <label htmlFor="notify-checkbox" style={{ fontSize: '12px', color: '#333', lineHeight: '1.3', cursor: 'pointer' }}>
-                Doresc notificări pe mail pentru campanii noi și restricții.
+                Doresc notificări pe e-mail pentru campanii noi.
               </label>
             </div>
           </div>
@@ -457,14 +450,36 @@ function Register({ onSwitch, onRegisterSuccess }) {
               <div style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '8px', maxWidth: '500px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
 
                 <h3 style={{ marginTop: 0, marginBottom: '4px', color: '#e63946', textAlign: 'center', fontSize: '16px' }}>Politica de Confidențialitate</h3>
-                <p style={{ fontSize: '11px', color: '#666', textAlign: 'center', marginTop: 0, marginBottom: '10px' }}>Octombrie 2026</p>
+                <p style={{ fontSize: '11px', color: '#666', textAlign: 'center', marginTop: 0, marginBottom: '10px' }}>Ultima actualizare: 22 noiembrie 2026</p>
 
                 <div style={{ fontSize: '12px', color: '#444', lineHeight: '1.5', textAlign: 'left', overflowY: 'auto', paddingRight: '6px', flex: 1, borderTop: '1px solid #eee', borderBottom: '1px solid #eee', paddingBottom: '8px', paddingTop: '8px' }}>
-                  <p>Prin utilizarea aplicației noastre pentru campaniile de donare de sânge, sunteți de acord cu prelucrarea datelor conform Regulamentului UE 2016/679 (GDPR).</p>
-                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>1. Colectarea datelor</h4>
-                  <p style={{ margin: '0 0 6px 0' }}>Datele sunt procesate de echipa „Dumbrăvița Salvează Vieți” împreună cu Centrul de Transfuzie Sanguină Timișoara.</p>
-                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>2. Securitate</h4>
-                  <p style={{ margin: '0 0 6px 0' }}>Informațiile sunt criptate și utilizate strict în scop organizatoric.</p>
+                  <p style={{ margin: '0 0 6px 0' }}>Această politică explică modul în care sunt prelucrate datele personale prin site-ul/aplicația „Donare de Sânge”, pentru organizarea campaniilor și programărilor. Prelucrarea se face în conformitate cu Regulamentul (UE) 2016/679 (GDPR) și Legea nr. 190/2018. Organizatorul campaniei, inclusiv echipa „Dumbrăvița Salvează Vieți”, răspunde de datele colectate în acest scop; Centrul de Transfuzie Sanguină Timișoara poate fi implicat în organizare, după caz.</p>
+
+                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>1. Datele pe care le prelucrăm</h4>
+                  <p style={{ margin: '0 0 6px 0' }}>În funcție de funcționalitatea folosită, putem prelucra:</p>
+                  <ul style={{ margin: '0 0 6px 0', paddingLeft: '18px' }}>
+                    <li>date de cont și identificare: nume, prenume, adresă de e-mail și număr de telefon;</li>
+                    <li>date furnizate opțional: grupa sanguină;</li>
+                    <li>date despre programare și participarea la campanie, precum și preferințele și timpul de deplasare declarate la înscrierea pe lista de așteptare;</li>
+                    <li>răspunsurile la chestionarul de eligibilitate, care pot dezvălui informații despre sănătate;</li>
+                    <li>dacă faci o programare pentru altă persoană: numele, prenumele, telefonul și grupa sanguină declarată pentru acea persoană;</li>
+                    <li>un cookie tehnic necesar autentificării și menținerii sesiunii, care expiră în cel mult 8 ore.</li>
+                  </ul>
+                  <p style={{ margin: '0 0 6px 0' }}>Nu solicităm CNP, date medicale din fișa donatorului sau rezultate de analize prin această aplicație. Nu folosim funcții de localizare, cameră ori notificări push.</p>
+
+                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>2. Scopurile prelucrării</h4>
+                  <p style={{ margin: '0 0 6px 0' }}>Folosim datele pentru crearea și securizarea contului, verificarea adresei de e-mail, gestionarea programărilor și a listelor de așteptare și organizarea campaniilor. Prin e-mail poți primi coduri de verificare a contului și resetare a parolei, confirmări sau anulări de programare, mementouri și notificări despre ofertele din lista de așteptare. Dacă alegi opțiunea din formular, îți putem trimite și e-mailuri despre campanii noi. Acestea sunt notificări prin e-mail, nu notificări push. Răspunsurile din chestionar sunt asociate programării pentru organizarea procesului; evaluarea medicală și decizia privind eligibilitatea pentru donare aparțin personalului medical de la centrul de transfuzie.</p>
+
+                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>3. Temeiuri și destinatarii datelor</h4>
+                  <p style={{ margin: '0 0 6px 0' }}>Prelucrăm datele necesare pentru furnizarea serviciului solicitat, pentru interesele legitime de administrare și securizare a campaniilor și, unde este necesar, pe baza consimțământului sau a obligațiilor legale aplicabile. Accesul este limitat la persoanele autorizate implicate în administrarea platformei și organizarea campaniilor. Datele nu sunt vândute. Pentru funcțiile folosite, anumite date pot fi prelucrate de furnizorii de servicii: Google, dacă alegi autentificarea Google, și furnizorul de e-mail utilizat pentru codurile de verificare, resetarea parolei și mesajele de programare. Acești furnizori prelucrează datele conform propriilor politici.</p>
+
+                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>4. Păstrarea și securitatea datelor</h4>
+                  <p style={{ margin: '0 0 6px 0' }}>Datele de verificare și resetare a parolei sunt temporare, iar codurile expiră după 5 minute. Celelalte date sunt păstrate atât timp cât contul și evidențele aferente sunt necesare pentru funcționarea serviciului, organizarea campaniilor și respectarea obligațiilor legale aplicabile. Aplicăm măsuri tehnice și organizatorice pentru protejarea datelor; transmiterea sau stocarea securizată nu poate fi garantată în mod absolut.</p>
+
+                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>5. Drepturile tale și contact</h4>
+                  <p style={{ margin: '0 0 6px 0' }}>Poți solicita accesul la date, rectificarea, ștergerea sau restricționarea prelucrării și, unde se aplică, portabilitatea ori te poți opune prelucrării. Ștergerea poate fi limitată dacă păstrarea datelor este impusă de lege sau necesară pentru soluționarea unor solicitări. Aplicația nu oferă în prezent o funcție de ștergere a contului; pentru exercitarea drepturilor sau întrebări, scrie la <a href="mailto:dumbravita.salveazavieti@gmail.com" style={{ color: '#e63946' }}>dumbravita.salveazavieti@gmail.com</a>. Ai, de asemenea, dreptul de a depune o plângere la ANSPDCP.</p>
+
+                  <p style={{ margin: '0' }}>Dacă furnizezi datele altei persoane pentru o programare, asigură-te că ai dreptul să le comunici și informeaz-o despre această politică.</p>
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center', flexShrink: 0 }}>
@@ -479,7 +494,7 @@ function Register({ onSwitch, onRegisterSuccess }) {
                       }}
                       style={{ backgroundColor: '#2b9348', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}
                   >
-                    Accept
+                    Am înțeles
                   </button>
                   <button
                       type="button"

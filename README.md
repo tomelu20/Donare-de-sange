@@ -63,6 +63,7 @@ cd Donare-de-sange
 ### 2. Pregătiți baza de date
 
 Rulați `backend/setup.sql` în SQL Server Management Studio sau cu `sqlcmd`. Scriptul creează baza `donare` numai dacă aceasta nu există, creează tabelele lipsă și aplică migrările de schemă peste tabelele existente. Poate fi rulat din nou și nu șterge baza, tabele sau rânduri. Are nevoie de permisiuni SQL Server pentru crearea bazei de date atunci când aceasta nu există și pentru modificarea schemei.
+După actualizarea aplicației, rulați din nou `backend/setup.sql` pentru a adăuga coloana de preferință pentru notificări la utilizatorii existenți; aceștia rămân dezabonați implicit.
 
 Scriptul păstrează datele existente; dacă găsește stări de programare neașteptate, oprește migrarea și revine asupra modificărilor tranzacționale, în loc să le șteargă. Scripturile SQL mai vechi rămân în director ca referință, dar nu trebuie rulate ca parte a configurării standard: unele șterg date, recreează baza sau modifică utilizatori/date exemplu. `setup.sql` nu creează un cont administrator și nu adaugă campanii sau întrebări de eligibilitate implicite.
 
@@ -77,41 +78,48 @@ python -m pip install fastapi "uvicorn[standard]" sqlalchemy pydantic-settings p
 
 Creați `backend/.env` cu valorile locale corespunzătoare mediului dumneavoastră:
 
+Porniți de la `backend/.env.example` și completați valorile locale. Configurația minimă de dezvoltare arată astfel:
+
 ```dotenv
+ENV=development
 DATABASE_URL=sqlalchemy-url-pentru-sql-server
-SECRET_KEY=generati-o-cheie-lunga-si-aleatoare
+SECRET_KEY=cheie-locala-de-inlocuit
 ALGORITHM=HS256
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+ACCESS_TOKEN_EXPIRE_MINUTES=480
+CORS_ORIGINS=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
 GEMINI_API_KEY=
 EMAIL_USER=
 EMAIL_PASSWORD=
 GOOGLE_CLIENT_ID=
 ```
 
-`DATABASE_URL`, `SECRET_KEY`, `ALGORITHM`, `CORS_ORIGINS` și `GEMINI_API_KEY` sunt setările backend definite în `backend/config.py`. Configurați URL-ul SQLAlchemy și driverul ODBC conform instalării SQL Server. Datele SMTP sunt necesare pentru e-mailurile de verificare/reminder, iar cheia Gemini și clientul Google sunt necesare pentru funcționalitățile respective. Nu folosiți valorile-placeholder de mai sus în producție și nu publicați chei sau parole.
+`DATABASE_URL`, `SECRET_KEY`, `ALGORITHM`, `CORS_ORIGINS` și `GEMINI_API_KEY` sunt setările backend definite în `backend/config.py`. Configurați URL-ul SQLAlchemy și driverul ODBC conform instalării SQL Server. Datele SMTP sunt necesare pentru e-mailurile de verificare/reminder, iar cheia Gemini și clientul Google sunt necesare pentru funcționalitățile respective. `GOOGLE_CLIENT_ID` poate rămâne necompletat dacă autentificarea Google nu este folosită; butonul Google va fi ascuns. Nu folosiți valorile-placeholder de mai sus în producție și nu publicați chei sau parole.
 
-Rulați API-ul din directorul `backend`:
+Pentru producție, setați `ENV=production`, folosiți o cheie aleatoare de cel puțin 32 de octeți (de exemplu `py -c "import secrets; print(secrets.token_urlsafe(48))"`), configurați numai origini HTTPS explicite în `CORS_ORIGINS`, un `FRONTEND_URL` HTTPS și ambele credențiale SMTP. Backend-ul refuză pornirea dacă aceste condiții nu sunt îndeplinite. Frontend-ul trebuie construit cu `frontend/.env` configurat; păstrați frontend-ul și API-ul pe același site (de exemplu `www.exemplu.ro` și `api.exemplu.ro`) pentru ca cookie-ul de sesiune `SameSite=Lax` să funcționeze.
+
+Autentificarea frontend-ului folosește cookie-ul `HttpOnly`; tokenul nu este păstrat în `sessionStorage`. Cererile care folosesc cookie-ul trebuie să provină dintr-o origine aprobată. În producție, terminați HTTPS la un reverse proxy și rulați un singur worker API, deoarece scheduler-ul și limitatoarele actuale sunt locale procesului.
+
+Rulați API-ul din directorul `backend` în dezvoltare:
 
 ```powershell
 uvicorn main:app --reload
 ```
 
-API-ul este disponibil implicit la `http://127.0.0.1:8000`; documentația interactivă Swagger este la `http://127.0.0.1:8000/docs`.
+În producție, porniți fără `--reload` (de exemplu `uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1`) și expuneți serviciul numai prin reverse proxy HTTPS.
+
+API-ul este disponibil implicit la `http://127.0.0.1:8000`; documentația interactivă Swagger este la `http://127.0.0.1:8000/docs` numai în dezvoltare.
 
 ### 4. Instalați și porniți frontend-ul
 
-Într-un terminal nou, din rădăcina proiectului:
+Într-un terminal nou, copiați `frontend/.env.example` în `frontend/.env`, configurați adresa API și, dacă folosiți Google OAuth, client ID-ul Google. Apoi, din rădăcina proiectului:
 
 ```powershell
 cd frontend
 npm install
 ```
 
-Frontend-ul folosește implicit `http://127.0.0.1:8000` ca adresă API. Pentru o adresă diferită, creați `frontend/.env.local`:
-
-```dotenv
-VITE_API_URL=http://127.0.0.1:8000
-```
+Frontend-ul folosește `VITE_API_URL` ca adresă API; în dezvoltare valoarea implicită este `http://localhost:8000`. Orice modificare de variabile Vite necesită rebuild/restart.
 
 Porniți serverul de dezvoltare:
 
@@ -122,6 +130,7 @@ npm run dev
 Deschideți adresa indicată de Vite (implicit `http://localhost:5173`). Pentru un build de producție sau verificarea regulilor Oxlint:
 
 ```powershell
+# Asigurați-vă că frontend/.env conține VITE_API_URL=https://adresa-api
 npm run build
 npm run lint
 ```

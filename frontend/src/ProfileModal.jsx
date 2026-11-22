@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from './apiConfig';
 
 function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
   const [name, setName] = useState(user.name || '');
@@ -42,7 +43,7 @@ function ProfileModal({ user, myAppointments, onClose, onUserUpdated }) {
     setSuccess('');
 
     try {
-      const response = await axios.put(`http://127.0.0.1:8000/auth/users/${user.id}`, {
+      const response = await axios.put(`${API_BASE_URL}/auth/users/${user.id}`, {
         name,
         surname,
         phone

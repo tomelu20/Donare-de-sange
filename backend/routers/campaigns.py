@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, time
 from database import get_db
 from schemas.schemas import CampaignCreate, CampaignOut, SlotOut
 from models import Campaign, User
-from routers.auth import send_email_via_gmail  # <--- Importul funcției de trimitere mail
+from routers.auth import require_admin, send_email_via_gmail
 
 router = APIRouter(
     prefix="/campaigns",
@@ -21,7 +21,11 @@ def get_campaigns(db: Session = Depends(get_db)):
     return campaigns
 
 @router.put("/{id}/toggle-status", status_code=status.HTTP_200_OK)
-def toggle_campaign_status(id: int, db: Session = Depends(get_db)):
+def toggle_campaign_status(
+    id: int,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
     campaign = db.query(Campaign).filter(Campaign.id == id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campania nu a fost găsită.")
@@ -33,7 +37,11 @@ def toggle_campaign_status(id: int, db: Session = Depends(get_db)):
     return {"message": f"Campania a fost {status_str} cu succes.", "is_active": campaign.is_active}
 
 @router.post("/", response_model=CampaignOut, status_code=status.HTTP_201_CREATED)
-def create_campaign(campaign_data: CampaignCreate, db: Session = Depends(get_db)):
+def create_campaign(
+    campaign_data: CampaignCreate,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
     # Creează o campanie nouă
     new_campaign = Campaign(
         title=campaign_data.title,

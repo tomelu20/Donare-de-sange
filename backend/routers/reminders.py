@@ -4,7 +4,8 @@ from sqlalchemy import text
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os
+
+from config import settings
 from database import get_db
 from models import User, Campaign
 from routers.auth import require_admin
@@ -15,8 +16,8 @@ router = APIRouter(
 )
 
 def send_reminder_email_task(email: str, name: str, campaign_title: str, location: str, date_str: str, time_str: str):
-    email_user = os.getenv("EMAIL_USER")
-    email_password = os.getenv("EMAIL_PASSWORD")
+    email_user = settings.EMAIL_USER
+    email_password = settings.EMAIL_PASSWORD
     
     if not email_user or not email_password:
         return

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from './apiConfig';
 import ReactMarkdown from 'react-markdown';
 
 function AIChatbox({ onSelectCampaign }) {
@@ -55,7 +56,7 @@ function AIChatbox({ onSelectCampaign }) {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/ai/chat', {
+      const response = await axios.post(`${API_BASE_URL}/ai/chat`, {
         message: userMessage,
         history: historyToSend
       });
@@ -110,7 +111,7 @@ function AIChatbox({ onSelectCampaign }) {
                           <div className="markdown-chat-reply">
                             <ReactMarkdown
                                 components={{
-                                  a: ({ node, href, children, ...props }) => {
+                                  a: ({ node: _node, href, children, ...props }) => {
                                     if (href && href.startsWith('#book-campaign-')) {
                                       const campaignId = href.replace('#book-campaign-', '');
                                       return (

@@ -36,6 +36,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(Enum(UserRole, name="user_role_check"), nullable=False, default=UserRole.USER)
     blood_group = Column(String(10), default="Nu știu", nullable=False)
+    notify_campaigns = Column(Boolean, nullable=False, default=False, server_default=text("0"))
 
     appointments = relationship("Appointment", back_populates="user", cascade="all, delete-orphan")
     waitlist_entries = relationship("Waitlist", back_populates="user", cascade="all, delete-orphan")

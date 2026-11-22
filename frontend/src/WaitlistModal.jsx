@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from './apiConfig';
 
 function WaitlistModal({ campaign, onClose, onRefresh }) {
   const [isOpen, setIsOpen] = useState(true);
 
   const savedUser = sessionStorage.getItem('user_session');
   const user = savedUser ? JSON.parse(savedUser) : null;
-
-  if (!isOpen || !campaign || !user) return null;
 
   const campaignDays = [];
   if (campaign) {
@@ -48,6 +47,8 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  if (!isOpen || !campaign || !user) return null;
 
   const handleClose = (e) => {
     if (e) {
@@ -119,26 +120,11 @@ function WaitlistModal({ campaign, onClose, onRefresh }) {
 
     let combinedTime = `Data: ${formatDateRO(selectedDate)} | Interval: de la ${startTime} până la ${endTime}`;
 
-    const token =
-        sessionStorage.getItem('token') ||
-        sessionStorage.getItem('access_token') ||
-        sessionStorage.getItem('jwt') ||
-        localStorage.getItem('token') ||
-        localStorage.getItem('access_token') ||
-        user?.token ||
-        user?.access_token ||
-        user?.jwt ||
-        (savedUser ? JSON.parse(savedUser)?.token || JSON.parse(savedUser)?.access_token : null);
-
     try {
-      await axios.post('http://127.0.0.1:8000/waitlist/', {
+      await axios.post(`${API_BASE_URL}/waitlist/`, {
         campaign_id: campaign.id,
         preferred_time_range: combinedTime,
         travel_time_minutes: parseInt(travelTime)
-      }, {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : ''
-        }
       });
 
       setSuccess('Te-ai înscris cu succes în lista de așteptare!');

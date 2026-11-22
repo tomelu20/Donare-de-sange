@@ -2,6 +2,7 @@ import os
 import random
 import re
 import smtplib
+import logging
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -17,11 +18,13 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import get_db
 from models import User, EmailVerificationCode, UserRole
 from schemas.schemas import UserCreate, UserLogin, UserOut
 
 limiter = Limiter(key_func=get_remote_address)
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth",
@@ -30,12 +33,12 @@ router = APIRouter(
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "CHANGE_THIS_TO_A_VERY_STRONG_SECRET_IN_PRODUCTION")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480
-IS_PRODUCTION = os.getenv("ENV", "development") == "production"
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+IS_PRODUCTION = settings.ENV == "production"
 
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "TĂU_CLIENT_ID_DIN_GOOGLE_CONSOLE.apps.googleusercontent.com")
+GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
 
 failed_login_tracker = {}
 MAX_LOGIN_ATTEMPTS = 5
@@ -74,16 +77,26 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     return user
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.ADMIN and str(current_user.role).lower() != 'admin':
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acces interzis! Necesită rol de administrator."
         )
     return current_user
 
+def is_admin(user: User) -> bool:
+    return user.role == UserRole.ADMIN or str(user.role).lower() == "admin"
+
+def ensure_owner_or_admin(owner_id: int, current_user: User) -> None:
+    if current_user.id != owner_id and not is_admin(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Nu aveți permisiunea de a modifica această înregistrare."
+        )
+
 def send_email_via_gmail(to_email: str, code: str, subject_title: str = "Codul tau de verificare - Donare Sange", html_message_content: str = None):
-    email_user = os.getenv("EMAIL_USER")
-    email_password = os.getenv("EMAIL_PASSWORD")
+    email_user = settings.EMAIL_USER
+    email_password = settings.EMAIL_PASSWORD
 
     if not email_user or not email_password:
         print("[CRITICAL] Datele de logare pentru Gmail lipsesc din .env!")
@@ -230,7 +243,8 @@ def register(request: Request, response: Response, user_data: UserCreate, db: Se
         phone=user_data.phone.strip(),
         email=email,
         password_hash=hashed_password,
-        blood_group=user_data.blood_group.strip() if user_data.blood_group else "Nu știu"
+        blood_group=user_data.blood_group.strip() if user_data.blood_group else "Nu știu",
+        notify_campaigns=user_data.notify_campaigns
     )
 
     db.add(new_user)
@@ -252,8 +266,6 @@ def register(request: Request, response: Response, user_data: UserCreate, db: Se
     )
 
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
         "user": {
             "id": new_user.id,
             "email": new_user.email,
@@ -306,8 +318,6 @@ def login(request: Request, response: Response, user_credentials: UserLogin, db:
     )
 
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
         "user": {
             "id": user.id,
             "email": user.email,
@@ -325,6 +335,9 @@ class GoogleAuthPayload(BaseModel):
 @router.post("/google-login")
 @limiter.limit("10/minute")
 def google_login(request: Request, response: Response, payload: GoogleAuthPayload, db: Session = Depends(get_db)):
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Autentificarea cu Google nu este configurată.")
+
     try:
         idinfo = id_token.verify_oauth2_token(
             payload.credential,
@@ -367,8 +380,6 @@ def google_login(request: Request, response: Response, payload: GoogleAuthPayloa
         )
 
         return {
-            "access_token": access_token,
-            "token_type": "bearer",
             "user": {
                 "id": user.id,
                 "email": user.email,
@@ -380,14 +391,23 @@ def google_login(request: Request, response: Response, payload: GoogleAuthPayloa
             }
         }
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Token Google invalid: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Eroare internă la autentificarea cu Google: {str(e)}")
+    except HTTPException:
+        raise
+    except ValueError:
+        logger.warning("Google sign-in rejected an invalid identity token.")
+        raise HTTPException(status_code=400, detail="Token Google invalid.")
+    except Exception:
+        logger.exception("Google sign-in failed unexpectedly.")
+        raise HTTPException(status_code=500, detail="Autentificarea cu Google nu a reușit.")
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(key="access_token")
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=IS_PRODUCTION,
+        samesite="lax"
+    )
     return {"detail": "Deconectare reușită."}
 
 class ForgotPasswordRequest(BaseModel):

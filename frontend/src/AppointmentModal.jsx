@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from './apiConfig';
 
 function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefresh, onOpenWaitlist, isAssigningFromWaitlist = false, waitlistId = null }) {
   const [slots, setSlots] = useState([]);
@@ -33,21 +34,21 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
     }
   }, [eligibilityQuestions]);
 
-  const fetchSlots = async () => {
+  const fetchSlots = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://127.0.0.1:8000/campaigns/${campaign.id}/slots`);
+      const response = await axios.get(`${API_BASE_URL}/campaigns/${campaign.id}/slots`);
       setSlots(response.data);
     } catch {
       setError('Nu s-au putut încărca intervalele orare.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [campaign.id]);
 
   useEffect(() => {
     fetchSlots();
-  }, [campaign.id]);
+  }, [fetchSlots]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -129,10 +130,10 @@ function AppointmentModal({ campaign, eligibilityQuestions = [], onClose, onRefr
 
     try {
       if (isAssigningFromWaitlist) {
-        await axios.post(`http://127.0.0.1:8000/waitlist/${waitlistId}/assign?slot_time=${selectedSlot.time}`);
+        await axios.post(`${API_BASE_URL}/waitlist/${waitlistId}/assign?slot_time=${selectedSlot.time}`);
         setSuccess('Donatorul din lista de așteptare a fost asignat cu succes!');
       } else {
-        await axios.post('http://127.0.0.1:8000/eligibility/submit', {
+        await axios.post(`${API_BASE_URL}/eligibility/submit`, {
           appointment: {
             campaign_id: campaign.id,
             slot_time: selectedSlot.time,
