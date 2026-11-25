@@ -447,37 +447,42 @@ function Register({ onSwitch, onRegisterSuccess }) {
 
         {showTermsModal && (
             <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px', boxSizing: 'border-box' }}>
-              <div style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '8px', maxWidth: '500px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+              <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '680px', width: '100%', maxHeight: '82vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 8px 24px rgba(0,0,0,0.28)' }}>
 
-                <h3 style={{ marginTop: 0, marginBottom: '4px', color: '#e63946', textAlign: 'center', fontSize: '16px' }}>Politica de Confidențialitate</h3>
-                <p style={{ fontSize: '11px', color: '#666', textAlign: 'center', marginTop: 0, marginBottom: '10px' }}>Ultima actualizare: 22 noiembrie 2026</p>
+                <h3 style={{ marginTop: 0, marginBottom: '14px', color: '#e63946', textAlign: 'center', fontSize: '20px' }}>Politica de Confidențialitate</h3>
 
-                <div style={{ fontSize: '12px', color: '#444', lineHeight: '1.5', textAlign: 'left', overflowY: 'auto', paddingRight: '6px', flex: 1, borderTop: '1px solid #eee', borderBottom: '1px solid #eee', paddingBottom: '8px', paddingTop: '8px' }}>
-                  <p style={{ margin: '0 0 6px 0' }}>Această politică explică modul în care sunt prelucrate datele personale prin site-ul/aplicația „Donare de Sânge”, pentru organizarea campaniilor și programărilor. Prelucrarea se face în conformitate cu Regulamentul (UE) 2016/679 (GDPR) și Legea nr. 190/2018. Organizatorul campaniei, inclusiv echipa „Dumbrăvița Salvează Vieți”, răspunde de datele colectate în acest scop; Centrul de Transfuzie Sanguină Timișoara poate fi implicat în organizare, după caz.</p>
+                <div style={{ fontSize: '13px', color: '#333', lineHeight: '1.55', textAlign: 'justify', overflowY: 'auto', paddingRight: '12px', flex: 1, borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd', paddingBottom: '14px', paddingTop: '14px' }}>
+                  <p style={{ margin: '0 0 14px 0' }}>Această politică explică modul în care sunt prelucrate datele personale prin site-ul/aplicația „Donare de Sânge”, pentru organizarea campaniilor și programărilor. Prelucrarea se face în conformitate cu Regulamentul (UE) 2016/679 (GDPR) și Legea nr. 190/2018. Organizatorul campaniei, răspunde de datele colectate în acest scop.</p>
 
-                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>1. Datele pe care le prelucrăm</h4>
-                  <p style={{ margin: '0 0 6px 0' }}>În funcție de funcționalitatea folosită, putem prelucra:</p>
-                  <ul style={{ margin: '0 0 6px 0', paddingLeft: '18px' }}>
+                  <h4 style={{ color: '#222', margin: '16px 0 6px 0', fontSize: '14px' }}>1. Datele pe care le prelucrăm</h4>
+                  <p style={{ margin: '0 0 8px 0' }}>În funcție de funcționalitatea folosită, putem prelucra:</p>
+                  <ul style={{ margin: '0 0 10px 0', paddingLeft: '22px' }}>
                     <li>date de cont și identificare: nume, prenume, adresă de e-mail și număr de telefon;</li>
-                    <li>date furnizate opțional: grupa sanguină;</li>
                     <li>date despre programare și participarea la campanie, precum și preferințele și timpul de deplasare declarate la înscrierea pe lista de așteptare;</li>
-                    <li>răspunsurile la chestionarul de eligibilitate, care pot dezvălui informații despre sănătate;</li>
-                    <li>dacă faci o programare pentru altă persoană: numele, prenumele, telefonul și grupa sanguină declarată pentru acea persoană;</li>
-                    <li>un cookie tehnic necesar autentificării și menținerii sesiunii, care expiră în cel mult 8 ore.</li>
+                    <li>răspunsurile la chestionarul de eligibilitate, care pot dezvălui anumite informații despre sănătate;</li>
+                    <li>dacă faci o programare pentru altă persoană: numele, prenumele, telefonul declarat pentru acea persoană;</li>
                   </ul>
-                  <p style={{ margin: '0 0 6px 0' }}>Nu solicităm CNP, date medicale din fișa donatorului sau rezultate de analize prin această aplicație. Nu folosim funcții de localizare, cameră ori notificări push.</p>
+                  <p style={{ margin: '0 0 14px 0' }}>Nu solicităm CNP, date medicale din fișa donatorului sau rezultate de analize prin această aplicație. Nu folosim funcții de localizare, cameră ori notificări push.</p>
 
-                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>2. Scopurile prelucrării</h4>
-                  <p style={{ margin: '0 0 6px 0' }}>Folosim datele pentru crearea și securizarea contului, verificarea adresei de e-mail, gestionarea programărilor și a listelor de așteptare și organizarea campaniilor. Prin e-mail poți primi coduri de verificare a contului și resetare a parolei, confirmări sau anulări de programare, mementouri și notificări despre ofertele din lista de așteptare. Dacă alegi opțiunea din formular, îți putem trimite și e-mailuri despre campanii noi. Acestea sunt notificări prin e-mail, nu notificări push. Răspunsurile din chestionar sunt asociate programării pentru organizarea procesului; evaluarea medicală și decizia privind eligibilitatea pentru donare aparțin personalului medical de la centrul de transfuzie.</p>
+                  <h4 style={{ color: '#222', margin: '16px 0 6px 0', fontSize: '14px' }}>2. Scopurile prelucrării</h4>
+                  <p style={{ margin: '0 0 8px 0' }}>Folosim datele pentru crearea și securizarea contului, verificarea adresei de e-mail, gestionarea programărilor și a listelor de așteptare și organizarea campaniilor. Prin e-mail poți primi</p>
+                  <ul style={{ margin: '0 0 10px 0', paddingLeft: '22px' }}>
+                    <li>coduri de verificare a contului și resetare a parolei,</li>
+                    <li>confirmări sau anulări de programare,</li>
+                    <li>notificări despre restricții temporare noi,</li>
+                    <li>notificări despre locuri eliberate atunci când ai solicitat să fii pe lista de așteptare,</li>
+                    <li>mesaj de reamintire a zilei / orei de donare.</li>
+                  </ul>
+                  <p style={{ margin: '0 0 14px 0' }}>Acestea sunt notificări prin e-mail, nu notificări push. Răspunsurile din chestionar sunt asociate programării pentru organizarea procesului; evaluarea medicală și decizia privind eligibilitatea pentru donare aparțin personalului medical de la centrul de transfuzie.</p>
 
-                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>3. Temeiuri și destinatarii datelor</h4>
-                  <p style={{ margin: '0 0 6px 0' }}>Prelucrăm datele necesare pentru furnizarea serviciului solicitat, pentru interesele legitime de administrare și securizare a campaniilor și, unde este necesar, pe baza consimțământului sau a obligațiilor legale aplicabile. Accesul este limitat la persoanele autorizate implicate în administrarea platformei și organizarea campaniilor. Datele nu sunt vândute. Pentru funcțiile folosite, anumite date pot fi prelucrate de furnizorii de servicii: Google, dacă alegi autentificarea Google, și furnizorul de e-mail utilizat pentru codurile de verificare, resetarea parolei și mesajele de programare. Acești furnizori prelucrează datele conform propriilor politici.</p>
+                  <h4 style={{ color: '#222', margin: '16px 0 6px 0', fontSize: '14px' }}>3. Temeiuri și destinatarii datelor</h4>
+                  <p style={{ margin: '0 0 14px 0' }}>Prelucrăm datele necesare pentru furnizarea serviciului solicitat, pentru interesele legitime de administrare și securizare a campaniilor de donare de sânge în comunitate. Accesul este limitat la persoanele implicate în administrarea platformei și organizarea campaniilor. Datele nu sunt vândute. Pentru funcțiile folosite, anumite date pot fi prelucrate de furnizorii de servicii: Google, dacă alegi autentificarea Google, și furnizorul de e-mail utilizat pentru codurile de verificare, resetarea parolei și mesajele de programare. Acești furnizori prelucrează datele conform propriilor politici.</p>
 
-                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>4. Păstrarea și securitatea datelor</h4>
-                  <p style={{ margin: '0 0 6px 0' }}>Datele de verificare și resetare a parolei sunt temporare, iar codurile expiră după 5 minute. Celelalte date sunt păstrate atât timp cât contul și evidențele aferente sunt necesare pentru funcționarea serviciului, organizarea campaniilor și respectarea obligațiilor legale aplicabile. Aplicăm măsuri tehnice și organizatorice pentru protejarea datelor; transmiterea sau stocarea securizată nu poate fi garantată în mod absolut.</p>
+                  <h4 style={{ color: '#222', margin: '16px 0 6px 0', fontSize: '14px' }}>4. Păstrarea și securitatea datelor</h4>
+                  <p style={{ margin: '0 0 14px 0' }}>Datele de verificare și resetare a parolei sunt temporare, iar codurile expiră după 5 minute. Celelalte date sunt păstrate atât timp cât contul și evidențele aferente sunt necesare pentru funcționarea serviciului, organizarea campaniilor. Aplicăm măsuri tehnice și organizatorice pentru protejarea datelor; transmiterea sau stocarea securizată nu poate fi garantată în mod absolut.</p>
 
-                  <h4 style={{ color: '#222', margin: '8px 0 2px 0' }}>5. Drepturile tale și contact</h4>
-                  <p style={{ margin: '0 0 6px 0' }}>Poți solicita accesul la date, rectificarea, ștergerea sau restricționarea prelucrării și, unde se aplică, portabilitatea ori te poți opune prelucrării. Ștergerea poate fi limitată dacă păstrarea datelor este impusă de lege sau necesară pentru soluționarea unor solicitări. Aplicația nu oferă în prezent o funcție de ștergere a contului; pentru exercitarea drepturilor sau întrebări, scrie la <a href="mailto:dumbravita.salveazavieti@gmail.com" style={{ color: '#e63946' }}>dumbravita.salveazavieti@gmail.com</a>. Ai, de asemenea, dreptul de a depune o plângere la ANSPDCP.</p>
+                  <h4 style={{ color: '#222', margin: '16px 0 6px 0', fontSize: '14px' }}>5. Drepturile tale și contact</h4>
+                  <p style={{ margin: '0 0 14px 0' }}>Poți solicita accesul la date, rectificarea, ștergerea sau restricționarea prelucrării și, unde se aplică, portabilitatea ori te poți opune prelucrării. Aplicația nu oferă în prezent o funcție de ștergere a contului; pentru exercitarea drepturilor sau întrebări, scrie la <a href="mailto:dumbravita.salveazavieti@gmail.com" style={{ color: '#e63946' }}>dumbravita.salveazavieti@gmail.com</a>.</p>
 
                   <p style={{ margin: '0' }}>Dacă furnizezi datele altei persoane pentru o programare, asigură-te că ai dreptul să le comunici și informeaz-o despre această politică.</p>
                 </div>
